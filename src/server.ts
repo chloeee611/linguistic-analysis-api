@@ -1,3 +1,6 @@
+import * as dotenv from "dotenv";
+dotenv.config({ path: __dirname + "/config.env" });
+
 import express, { Request, Response } from "express";
 import { json } from "body-parser";
 import userRouter from "./routes/user-routes";
