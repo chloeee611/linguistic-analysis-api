@@ -1,5 +1,4 @@
 import { getAllUsers, getUser, postUser } from "../controllers/user-controller";
-
 import express from "express";
 
 const router = express.Router({ mergeParams: true });
