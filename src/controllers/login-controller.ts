@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { User } from "../model/user.types";
-import sql from "../db/db";
+import sql from "../external/db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 

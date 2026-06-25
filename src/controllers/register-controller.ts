@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { User } from "../model/user.types";
-import sql from "../db/db";
+import sql from "../external/db";
 import bcrypt from "bcrypt";
 const SALT_WORK_FACTOR = 10;
 
@@ -51,6 +51,7 @@ export const postRegister = async (req: Request, res: Response) => {
 
     res.status(201);
     res.json({
+        // TODO make user auto login after successfully registering
         message: "User successfully registered",
     });
 };

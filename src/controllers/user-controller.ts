@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { User } from "../model/user.types";
-import sql from "../db/db";
+import sql from "../external/db";
 
 export const getAllUsers = async (_: Request, res: Response) => {
     const users = await sql<User[]>`
@@ -8,7 +8,6 @@ export const getAllUsers = async (_: Request, res: Response) => {
         FROM users
     `;
 
-    res.header("Access-Control-Allow-Origin", "*");
     res.status(200);
     res.json(users);
 };
