@@ -4,7 +4,7 @@ import { api } from "../external/analysis-api";
 import supabase from "../external/storage";
 import fs from "fs/promises";
 
-export const postAnalysis = async (req: Request, res: Response) => {
+export const postTranscript = async (req: Request, res: Response) => {
     // Upload file using standard upload
     if (!req.file?.path) {
         res.status(400);

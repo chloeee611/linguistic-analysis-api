@@ -62,7 +62,7 @@ export const postLogin = async (req: Request, res: Response) => {
                 email: user.email,
             },
             process.env.JWT_SECRET,
-            { expiresIn: "1h" },
+            { expiresIn: "1d" },
         );
     } catch (err2) {
         console.log(err2);
