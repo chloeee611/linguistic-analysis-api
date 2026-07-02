@@ -2,10 +2,11 @@ import { Request, Response } from "express";
 import { User } from "../model/user.types";
 import sql from "../external/db";
 
-export const getAllProjects = async (_: Request, res: Response) => {
+export const getAllProjects = async (req: Request, res: Response) => {
     const users = await sql<User[]>`
         SELECT *
         FROM projects
+        WHERE user_id = ${req.user.id}
     `;
 
     res.status(200);
