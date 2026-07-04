@@ -5,6 +5,7 @@ import { json } from "body-parser";
 
 import transcriptRouter from "./routes/transcript-routes";
 import registerRouter from "./routes/register-routes";
+import analysisRouter from "./routes/analysis-routes";
 import projectRouter from "./routes/project-routes";
 import loginRouter from "./routes/login-routes";
 import userRouter from "./routes/user-routes";
@@ -26,6 +27,7 @@ app.use("/api/register", registerRouter);
 app.use("/api/login", loginRouter);
 app.use("/api/transcript", transcriptRouter);
 app.use("/api/projects", validateJwt, projectRouter);
+app.use("/api/analysis", validateJwt, analysisRouter);
 
 // Error handling middleware
 // app.use((err: Error, _: Request, res: Response) => {
