@@ -2,7 +2,27 @@ import { Request, Response } from "express";
 import { api } from "../external/analysis-api";
 
 import supabase from "../external/storage";
+import sql from "../external/db";
 import fs from "fs/promises";
+import { Transcript } from "../model/transcript.types";
+
+export const getTranscript = async (req: Request, res: Response) => {
+    const { projectId } = req.params;
+
+    if (projectId === undefined || Array.isArray(projectId)) {
+        res.status(400);
+        return;
+    }
+
+    const transcripts = await sql<Transcript[]>`
+        SELECT *
+        FROM transcripts
+        WHERE project_id = ${projectId}
+    `;
+
+    res.status(200);
+    res.json(transcripts);
+};
 
 export const postTranscript = async (req: Request, res: Response) => {
     // Upload file using standard upload

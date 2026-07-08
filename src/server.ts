@@ -25,7 +25,7 @@ app.use(cors());
 app.use("/api/users", userRouter);
 app.use("/api/register", registerRouter);
 app.use("/api/login", loginRouter);
-app.use("/api/transcript", transcriptRouter);
+app.use("/api/transcripts", validateJwt, transcriptRouter);
 app.use("/api/projects", validateJwt, projectRouter);
 app.use("/api/analysis", validateJwt, analysisRouter);
 
