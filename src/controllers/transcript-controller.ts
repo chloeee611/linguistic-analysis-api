@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { api } from "../external/analysis-api";
+// import { api } from "../external/analysis-api";
 
 import supabase from "../external/storage";
 import sql from "../external/db";
@@ -25,6 +25,8 @@ export const getTranscript = async (req: Request, res: Response) => {
 };
 
 export const postTranscript = async (req: Request, res: Response) => {
+    const { projectId } = req.body;
+
     // Upload file using standard upload
     if (!req.file?.path) {
         res.status(400);
@@ -44,9 +46,14 @@ export const postTranscript = async (req: Request, res: Response) => {
         res.json(error);
     } else {
         // Handle success
-        const { data } = await api.get(`analysis/${req.file.originalname}`);
-        res.json(data);
+        // const { data } = await api.get(`analysis/${req.file.originalname}`);
+        res.json({ message: "Upload successful" });
     }
+
+    await sql`
+    INSERT INTO transcripts (project_id, title, file_url)
+    VALUES (${projectId}, ${req.file.originalname}, ${req.file.originalname})
+    `;
 
     await fs.unlink(req.file.path);
 };
