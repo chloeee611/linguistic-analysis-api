@@ -22,9 +22,9 @@ app.use(json());
 app.use(cors());
 
 // Routes
-app.use("/api/users", userRouter);
 app.use("/api/register", registerRouter);
 app.use("/api/login", loginRouter);
+app.use("/api/users", validateJwt, userRouter);
 app.use("/api/transcripts", validateJwt, transcriptRouter);
 app.use("/api/projects", validateJwt, projectRouter);
 app.use("/api/analysis", validateJwt, analysisRouter);

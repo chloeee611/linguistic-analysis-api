@@ -31,7 +31,7 @@ export const validateJwt = (
                 message: "Token has expired",
             });
         } else {
-            res.status(500);
+            res.status(403);
             res.json({
                 message: "Error - invalid token",
             });

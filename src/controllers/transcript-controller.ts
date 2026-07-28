@@ -76,7 +76,7 @@ export const postTranscript = async (req: Request, res: Response) => {
         // Handle error
         console.error(error);
         res.json(error);
-        await fs.unlink(req.file.path);
+        fs.unlink(req.file.path);
         return;
     }
 
@@ -98,7 +98,7 @@ export const postTranscript = async (req: Request, res: Response) => {
     if (newId === undefined) {
         res.status(500);
         res.json({ error: "There was an issue inserting transcript" });
-        await fs.unlink(req.file.path);
+        fs.unlink(req.file.path);
         return;
     }
 
@@ -112,5 +112,5 @@ export const postTranscript = async (req: Request, res: Response) => {
     res.status(200);
     res.json({});
 
-    await fs.unlink(req.file.path);
+    fs.unlink(req.file.path);
 };

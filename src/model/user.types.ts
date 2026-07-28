@@ -4,4 +4,8 @@ export type User = {
     username: string;
     email: string;
     password: string;
+    dob: string;
+    bio: string;
+    researchField: string;
+    location: string;
 };
