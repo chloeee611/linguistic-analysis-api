@@ -1,4 +1,5 @@
 import {
+    getAllTranscripts,
     getTranscript,
     postTranscript,
 } from "../controllers/transcript-controller";
@@ -9,7 +10,8 @@ const upload = multer({ dest: "uploads/" });
 
 const router = express.Router({ mergeParams: true });
 
-router.get("/project/:projectId", getTranscript);
+router.get("/", getAllTranscripts);
+router.get("/:transcriptId", getTranscript);
 router.post("/", upload.single("uploaded_file"), postTranscript);
 
 export default router;

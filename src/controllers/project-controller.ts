@@ -1,17 +1,16 @@
 import { Request, Response } from "express";
-import { User } from "../model/user.types";
 import { Project } from "../model/project.types";
 import sql from "../external/db";
 
 export const getAllProjects = async (req: Request, res: Response) => {
-    const users = await sql<User[]>`
+    const projects = await sql<Project[]>`
         SELECT *
         FROM projects
         WHERE user_id = ${req.user.id}
     `;
 
     res.status(200);
-    res.json(users);
+    res.json(projects);
 };
 
 export const getProject = async (req: Request, res: Response) => {
@@ -44,10 +43,18 @@ export const getProject = async (req: Request, res: Response) => {
 export const postProject = async (req: Request, res: Response) => {
     const { title, description } = req.body;
 
-    await sql`
+    const rows = await sql<{ id: number }[]>`
     INSERT INTO projects (user_id, title, description)
-    VALUES (${req.user.id}, ${title}, ${description})`;
+    VALUES (${req.user.id}, ${title}, ${description}) RETURNING id`;
+
+    const newId = rows[0]?.id;
+
+    if (newId === undefined) {
+        res.status(500);
+        res.json({ error: "There was an issue inserting project" });
+        return;
+    }
 
     res.status(201);
-    res.json({});
+    res.json({ id: Number(newId) });
 };
