@@ -1,3 +1,8 @@
+import {
+    removeTranscriptMetadata,
+    spliceTranscript,
+    transcriptToArray,
+} from "../helpers/transcripts.helpers";
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { Transcript } from "../model/transcript.types";
@@ -6,6 +11,7 @@ import { api } from "../external/analysis-api";
 import supabase from "../external/storage";
 import sql from "../external/db";
 import fs from "fs/promises";
+import { generatePaginationLinks } from "../helpers/pagination.helpers";
 
 export const getAllTranscripts = async (req: Request, res: Response) => {
     const transcripts = await sql<Transcript[]>`
@@ -34,6 +40,63 @@ export const getTranscript = async (req: Request, res: Response) => {
 
     res.status(200);
     res.json(transcripts[0]);
+};
+
+export const getTranscriptContent = async (req: Request, res: Response) => {
+    const { transcriptId } = req.params;
+    const { page = "0", pageSize = "25" } = req.query;
+
+    if (transcriptId === undefined || Array.isArray(transcriptId)) {
+        res.status(400);
+        return;
+    }
+
+    const transcript = (
+        await sql<Transcript[]>`
+        SELECT file_url
+        FROM transcripts
+        WHERE id = ${transcriptId}
+    `
+    )[0];
+
+    if (!transcript) {
+        res.status(404);
+        res.json({ message: "Transcript not found" });
+        return;
+    }
+
+    const { error, data } = await supabase.storage
+        .from("transcripts")
+        .download(transcript.file_url);
+
+    if (error) {
+        console.error(error);
+        res.status(500);
+        res.json({ message: "Error retrieving transcript content" });
+        return;
+    }
+
+    const pageNumber = Number(page);
+    const pageSizeNumber = Number(pageSize);
+
+    const transcriptArray = transcriptToArray(await data.text());
+    const transcriptArrayNoMetadata = removeTranscriptMetadata(transcriptArray);
+    const splicedTranscript = spliceTranscript(
+        transcriptArrayNoMetadata,
+        pageNumber - 1,
+        pageSizeNumber,
+    );
+
+    res.status(200);
+    res.json({
+        content: splicedTranscript,
+        links: generatePaginationLinks(
+            `/transcripts/${transcriptId}/content`,
+            pageNumber,
+            pageSizeNumber,
+            transcriptArrayNoMetadata.length,
+        ),
+    });
 };
 
 export const getProjectTranscripts = async (req: Request, res: Response) => {
