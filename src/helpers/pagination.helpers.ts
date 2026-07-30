@@ -6,16 +6,25 @@ export type PaginationLinks = {
     last: string;
 };
 
-export const generatePaginationLinks = (
+export type PaginationMeta = {
+    page: number;
+    size: number;
+    total: number;
+    lastPage: number;
+};
+
+export const generatePaginationLinksAndMeta = (
     url: string,
     currentPage: number,
     currentPageSize: number,
     totalSize: number,
 ) => {
+    const lastPage = Math.ceil(totalSize / currentPageSize);
+
     const links: PaginationLinks = {
         first: `${url}?page=${1}&pageSize=${currentPageSize}`,
         self: `${url}?page=${currentPage}&pageSize=${currentPageSize}`,
-        last: `${url}?page=${Math.ceil(totalSize / currentPageSize)}&pageSize=${currentPageSize}`,
+        last: `${url}?page=${lastPage}&pageSize=${currentPageSize}`,
     };
 
     if (currentPage > 1) {
@@ -26,5 +35,12 @@ export const generatePaginationLinks = (
         links.next = `${url}?page=${currentPage + 1}&pageSize=${currentPageSize}`;
     }
 
-    return links;
+    const meta: PaginationMeta = {
+        page: currentPage,
+        size: currentPageSize,
+        lastPage,
+        total: totalSize,
+    };
+
+    return { links, meta };
 };

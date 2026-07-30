@@ -3,6 +3,7 @@ import {
     spliceTranscript,
     transcriptToArray,
 } from "../helpers/transcripts.helpers";
+import { generatePaginationLinksAndMeta } from "../helpers/pagination.helpers";
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { Transcript } from "../model/transcript.types";
@@ -11,7 +12,6 @@ import { api } from "../external/analysis-api";
 import supabase from "../external/storage";
 import sql from "../external/db";
 import fs from "fs/promises";
-import { generatePaginationLinks } from "../helpers/pagination.helpers";
 
 export const getAllTranscripts = async (req: Request, res: Response) => {
     const transcripts = await sql<Transcript[]>`
@@ -44,7 +44,7 @@ export const getTranscript = async (req: Request, res: Response) => {
 
 export const getTranscriptContent = async (req: Request, res: Response) => {
     const { transcriptId } = req.params;
-    const { page = "0", pageSize = "25" } = req.query;
+    const { page = "1", pageSize = "25" } = req.query;
 
     if (transcriptId === undefined || Array.isArray(transcriptId)) {
         res.status(400);
@@ -79,7 +79,9 @@ export const getTranscriptContent = async (req: Request, res: Response) => {
     const pageNumber = Number(page);
     const pageSizeNumber = Number(pageSize);
 
-    const transcriptArray = transcriptToArray(await data.text());
+    const text = await data.text();
+
+    const transcriptArray = transcriptToArray(text);
     const transcriptArrayNoMetadata = removeTranscriptMetadata(transcriptArray);
     const splicedTranscript = spliceTranscript(
         transcriptArrayNoMetadata,
@@ -87,15 +89,17 @@ export const getTranscriptContent = async (req: Request, res: Response) => {
         pageSizeNumber,
     );
 
+    const linksAndMetaObject = generatePaginationLinksAndMeta(
+        `/transcripts/${transcriptId}/content`,
+        pageNumber,
+        pageSizeNumber,
+        transcriptArrayNoMetadata.length,
+    );
+
     res.status(200);
     res.json({
         content: splicedTranscript,
-        links: generatePaginationLinks(
-            `/transcripts/${transcriptId}/content`,
-            pageNumber,
-            pageSizeNumber,
-            transcriptArrayNoMetadata.length,
-        ),
+        ...linksAndMetaObject,
     });
 };
 
