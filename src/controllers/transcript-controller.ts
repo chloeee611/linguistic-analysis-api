@@ -1,6 +1,7 @@
 import {
+    compileTranscript,
     removeTranscriptMetadata,
-    spliceTranscript,
+    sliceTranscript,
     transcriptToArray,
 } from "../helpers/transcripts.helpers";
 import { generatePaginationLinksAndMeta } from "../helpers/pagination.helpers";
@@ -33,7 +34,7 @@ export const getTranscript = async (req: Request, res: Response) => {
     }
 
     const transcripts = await sql<Transcript[]>`
-        SELECT *
+        SELECT id, title, file_url, created_at, user_id, metadata
         FROM transcripts
         WHERE id = ${transcriptId}
     `;
@@ -53,7 +54,7 @@ export const getTranscriptContent = async (req: Request, res: Response) => {
 
     const transcript = (
         await sql<Transcript[]>`
-        SELECT file_url
+        SELECT parsed_content
         FROM transcripts
         WHERE id = ${transcriptId}
     `
@@ -65,26 +66,19 @@ export const getTranscriptContent = async (req: Request, res: Response) => {
         return;
     }
 
-    const { error, data } = await supabase.storage
-        .from("transcripts")
-        .download(transcript.file_url);
-
-    if (error) {
-        console.error(error);
-        res.status(500);
-        res.json({ message: "Error retrieving transcript content" });
-        return;
-    }
-
     const pageNumber = Number(page);
     const pageSizeNumber = Number(pageSize);
 
-    const text = await data.text();
+    const parsedContent = transcript.parsed_content;
 
-    const transcriptArray = transcriptToArray(text);
-    const transcriptArrayNoMetadata = removeTranscriptMetadata(transcriptArray);
-    const splicedTranscript = spliceTranscript(
-        transcriptArrayNoMetadata,
+    if (!parsedContent) {
+        res.status(200);
+        res.json({ message: "No Parsed Content Found" });
+        return;
+    }
+
+    const slicedContent = sliceTranscript(
+        parsedContent,
         pageNumber - 1,
         pageSizeNumber,
     );
@@ -93,12 +87,12 @@ export const getTranscriptContent = async (req: Request, res: Response) => {
         `/transcripts/${transcriptId}/content`,
         pageNumber,
         pageSizeNumber,
-        transcriptArrayNoMetadata.length,
+        parsedContent.length,
     );
 
     res.status(200);
     res.json({
-        content: splicedTranscript,
+        content: slicedContent,
         ...linksAndMetaObject,
     });
 };
@@ -139,6 +133,12 @@ export const postTranscript = async (req: Request, res: Response) => {
         .from("transcripts")
         .upload(`${req.user.id}/${uuidv4()}`, file);
 
+    // TODO: make all async queries run at once
+
+    const transcriptArray = transcriptToArray(file);
+    const transcriptArrayNoMetadata = removeTranscriptMetadata(transcriptArray);
+    const compiledTranscript = compileTranscript(transcriptArrayNoMetadata);
+
     if (error) {
         // Handle error
         console.error(error);
@@ -155,8 +155,8 @@ export const postTranscript = async (req: Request, res: Response) => {
     console.log(metadata);
 
     const rows = await sql<{ id: number }[]>`
-        INSERT INTO transcripts (title, file_url, user_id, metadata)
-        VALUES (${req.file.originalname}, ${data.path}, ${req.user.id}, ${metadata[data.path]})
+        INSERT INTO transcripts (title, file_url, user_id, metadata, parsed_content)
+        VALUES (${req.file.originalname}, ${data.path}, ${req.user.id}, ${metadata[data.path]}, ${compiledTranscript})
         RETURNING id
     `;
 
