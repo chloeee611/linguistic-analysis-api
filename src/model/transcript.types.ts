@@ -8,8 +8,20 @@ export type Transcript = {
 
 export type TranscriptMetaTypes = "mor" | "gra" | "com";
 
-export type TranscriptContent = {
+export type TranscriptContent = Record<string, string> & {
     utterance?: string;
     speaker?: string;
-    [key: string]: string;
+    mor?: TranscriptMor[];
+    gra?: TranscriptGra[];
+};
+
+export type TranscriptMor = {
+    word_class: string;
+    word: string;
+};
+
+export type TranscriptGra = {
+    position: number;
+    head: number;
+    relation: string;
 };

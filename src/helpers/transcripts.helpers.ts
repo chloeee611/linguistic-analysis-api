@@ -1,4 +1,8 @@
-import { TranscriptContent } from "../model/transcript.types";
+import {
+    TranscriptContent,
+    TranscriptMor,
+    TranscriptGra,
+} from "../model/transcript.types";
 
 export const transcriptToArray = (transcript: string) => {
     return transcript.split("\n");
@@ -39,11 +43,58 @@ export const compileTranscript = (transcript: string[]): any[] => {
             currentTranscript.speaker = type.replace("*", "").replace(":", "");
             currentTranscript.utterance = content;
         } else if (type.charAt(0) === "%") {
-            currentTranscript[type.replace("%", "").replace(":", "")] = content;
+            const parsedType = type
+                .replace("%", "")
+                .replace(":", "")
+                .toLowerCase();
+
+            if (parsedType === "mor") {
+                currentTranscript[parsedType] = compileMor(content);
+            } else if (parsedType === "gra") {
+                currentTranscript[parsedType] = compileGra(content);
+            } else {
+                currentTranscript[parsedType] = content;
+            }
         }
     }
 
     return transcriptBuilder;
+};
+
+const compileMor = (line: string) => {
+    const morBuilder: TranscriptMor[] = [];
+
+    for (const mor of line.split(" ")) {
+        const [wordClass, word] = mor.split("|");
+
+        if (!wordClass || !word) {
+            continue;
+        }
+
+        morBuilder.push({ word_class: wordClass, word });
+    }
+
+    return morBuilder;
+};
+
+const compileGra = (line: string) => {
+    const graBuilder: TranscriptGra[] = [];
+
+    for (const gra of line.split(" ")) {
+        const [position, head, relation] = gra.split("|");
+
+        if (!position || !head || !relation) {
+            continue;
+        }
+
+        graBuilder.push({
+            position: Number(position),
+            head: Number(head),
+            relation,
+        });
+    }
+
+    return graBuilder;
 };
 
 export const sliceTranscript = (
