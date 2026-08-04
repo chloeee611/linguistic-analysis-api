@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Project } from "../model/project.types";
+
 import sql from "../external/db";
 
 export const getAllProjects = async (req: Request, res: Response) => {
@@ -57,4 +58,24 @@ export const postProject = async (req: Request, res: Response) => {
 
     res.status(201);
     res.json({ id: Number(newId) });
+};
+
+export const linkTranscriptsToProject = async (req: Request, res: Response) => {
+    const { projectId } = req.params;
+    const { transcripts } = req.body as { transcripts: string[] };
+
+    if (projectId === undefined || Array.isArray(projectId)) {
+        res.status(400);
+        return;
+    }
+
+    for (const transcriptId of transcripts) {
+        await sql`
+            INSERT INTO projects_transcripts (project_id, transcript_id)
+            VALUES (${projectId}, ${transcriptId})
+        `;
+    }
+
+    res.status(201);
+    res.json({ message: `${transcripts.length} transcripts linked` });
 };

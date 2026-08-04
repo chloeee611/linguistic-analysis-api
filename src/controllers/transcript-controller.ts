@@ -16,8 +16,10 @@ import fs from "fs/promises";
 
 export const getAllTranscripts = async (req: Request, res: Response) => {
     const transcripts = await sql<Transcript[]>`
-        SELECT *
+        SELECT id, title, file_url, created_at, user_id, projects_transcripts.project_id, metadata
         FROM transcripts
+        LEFT JOIN projects_transcripts
+        ON projects_transcripts.transcript_id = transcripts.id
         WHERE user_id = ${req.user.id}
     `;
 
@@ -34,9 +36,12 @@ export const getTranscript = async (req: Request, res: Response) => {
     }
 
     const transcripts = await sql<Transcript[]>`
-        SELECT id, title, file_url, created_at, user_id, metadata
+        SELECT id, title, file_url, created_at, user_id, projects_transcripts.project_id, metadata
         FROM transcripts
+        LEFT JOIN projects_transcripts
+        ON projects_transcripts.transcript_id = transcripts.id
         WHERE id = ${transcriptId}
+        AND user_id= ${req.user.id}
     `;
 
     res.status(200);
@@ -57,6 +62,7 @@ export const getTranscriptContent = async (req: Request, res: Response) => {
         SELECT parsed_content
         FROM transcripts
         WHERE id = ${transcriptId}
+        AND user_id= ${req.user.id}
     `
     )[0];
 
@@ -111,6 +117,7 @@ export const getProjectTranscripts = async (req: Request, res: Response) => {
         INNER JOIN projects_transcripts
         ON projects_transcripts.transcript_id = transcripts.id
         WHERE project_id = ${projectId}
+        AND user_id= ${req.user.id}
     `;
 
     res.status(200);
@@ -171,7 +178,7 @@ export const postTranscript = async (req: Request, res: Response) => {
 
     if (projectId) {
         await sql`
-            INSERT INTO projects_transcripts (project_id, transcripts_id)
+            INSERT INTO projects_transcripts (project_id, transcript_id)
             VALUES (${projectId}, ${newId})
         `;
     }
