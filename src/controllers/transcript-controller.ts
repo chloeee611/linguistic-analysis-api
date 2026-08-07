@@ -4,8 +4,8 @@ import {
     sliceTranscript,
     transcriptToArray,
 } from "../helpers/transcripts.helpers";
-import { processFreq, processLexRare, processMlu } from "../helpers/analysis.helpers";
 import { generatePaginationLinksAndMeta } from "../helpers/pagination.helpers";
+import { processAnalysisQuery } from "../helpers/analysis.helpers";
 import { validateParamString } from "../helpers/validation.helpers";
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
@@ -160,9 +160,11 @@ export const postTranscript = async (req: Request, res: Response) => {
     }
 
     try {
-        const lexRarePromise = processLexRare(req.user.id, projectId, [{ id: newId, file_url: data.path }]);
-        const mluPromise = processMlu(req.user.id, projectId, [{ id: newId, file_url: data.path }]);
-        const frqPromise = processFreq(req.user.id, projectId, [{ id: newId, file_url: data.path }]);
+        const transcriptObject = [{ id: newId, file_url: data.path }];
+
+        const lexRarePromise = processAnalysisQuery("lexrare", req.user.id, projectId, transcriptObject);
+        const mluPromise = processAnalysisQuery("mlu", req.user.id, projectId, transcriptObject);
+        const frqPromise = processAnalysisQuery("freq", req.user.id, projectId, transcriptObject);
 
         await Promise.all([lexRarePromise, mluPromise, frqPromise]);
     } catch (err) {
