@@ -6,6 +6,7 @@ import {
 } from "../helpers/transcripts.helpers";
 import { generatePaginationLinksAndMeta } from "../helpers/pagination.helpers";
 import { Request, Response } from "express";
+import { processLexRare } from "../helpers/analysis.helpers";
 import { v4 as uuidv4 } from "uuid";
 import { Transcript } from "../model/transcript.types";
 import { api } from "../external/analysis-api";
@@ -125,7 +126,7 @@ export const getProjectTranscripts = async (req: Request, res: Response) => {
 };
 
 export const postTranscript = async (req: Request, res: Response) => {
-    const { projectId } = req.body;
+    const { project_id: projectId } = req.body;
 
     // Upload file using standard upload
     if (!req.file?.path) {
@@ -158,9 +159,6 @@ export const postTranscript = async (req: Request, res: Response) => {
         urls: [data.path],
     });
 
-    console.log(data);
-    console.log(metadata);
-
     const rows = await sql<{ id: number }[]>`
         INSERT INTO transcripts (title, file_url, user_id, metadata, parsed_content)
         VALUES (${req.file.originalname}, ${data.path}, ${req.user.id}, ${metadata[data.path]}, ${compiledTranscript})
@@ -183,8 +181,17 @@ export const postTranscript = async (req: Request, res: Response) => {
         `;
     }
 
+    try {
+        processLexRare(req.user.id, projectId, "mor", [
+            { id: newId, file_url: data.path },
+        ]);
+    } catch (err) {
+        res.status(500);
+        res.json({ error: err });
+    }
+
     res.status(200);
-    res.json({});
+    res.json({ id: newId });
 
     fs.unlink(req.file.path);
 };

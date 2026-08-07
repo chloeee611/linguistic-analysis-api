@@ -1,6 +1,7 @@
 import * as dotenv from "dotenv";
 dotenv.config({ path: __dirname + "/.env" });
 
+import { validateJwt } from "./middleware/jwtMiddleware";
 import { json } from "body-parser";
 
 import transcriptRouter from "./routes/transcript-routes";
@@ -11,7 +12,6 @@ import loginRouter from "./routes/login-routes";
 import userRouter from "./routes/user-routes";
 import express from "express";
 import cors from "cors";
-import { validateJwt } from "./middleware/jwtMiddleware";
 
 // Initialize Express app
 const app = express();

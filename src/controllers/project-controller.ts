@@ -41,6 +41,37 @@ export const getProject = async (req: Request, res: Response) => {
     res.json(projects[0]);
 };
 
+export const getProjectSummary = async (req: Request, res: Response) => {
+    const { projectId } = req.params;
+
+    if (projectId === undefined || Array.isArray(projectId)) {
+        res.status(400);
+        return;
+    }
+
+    const projects = await sql<Project[]>`
+        SELECT transcripts.metadata, analyses.type, analyses.result
+        FROM transcripts
+        INNER JOIN projects_transcripts
+        ON transcripts.id = projects_transcripts.transcript_id
+        INNER JOIN analyses
+        ON projects_transcripts.project_id = analyses.project_id
+        WHERE projects_transcripts.project_id = ${projectId}
+        AND transcripts.user_id = ${req.user.id}
+    `;
+
+    if (projects.length === 0) {
+        res.status(404).json({
+            message: "Project not found",
+        });
+
+        return;
+    }
+
+    res.status(200);
+    res.json(projects);
+};
+
 export const postProject = async (req: Request, res: Response) => {
     const { title, description } = req.body;
 
