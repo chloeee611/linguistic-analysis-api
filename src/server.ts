@@ -4,7 +4,6 @@ dotenv.config({ path: __dirname + "/.env" });
 import { validateJwt } from "./middleware/jwtMiddleware";
 import { json } from "body-parser";
 
-import transcriptRouter from "./routes/transcript-routes";
 import registerRouter from "./routes/register-routes";
 import analysisRouter from "./routes/analysis-routes";
 import projectRouter from "./routes/project-routes";
@@ -25,7 +24,6 @@ app.use(cors());
 app.use("/api/register", registerRouter);
 app.use("/api/login", loginRouter);
 app.use("/api/users", validateJwt, userRouter);
-app.use("/api/transcripts", validateJwt, transcriptRouter);
 app.use("/api/projects", validateJwt, projectRouter);
 app.use("/api/analysis", validateJwt, analysisRouter);
 

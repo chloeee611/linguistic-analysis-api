@@ -52,11 +52,9 @@ export const getProjectSummary = async (req: Request, res: Response) => {
     const projects = await sql<Project[]>`
         SELECT transcripts.metadata, analyses.type, analyses.result
         FROM transcripts
-        INNER JOIN projects_transcripts
-        ON transcripts.id = projects_transcripts.transcript_id
         INNER JOIN analyses
-        ON projects_transcripts.project_id = analyses.project_id
-        WHERE projects_transcripts.project_id = ${projectId}
+        ON transcripts.project_id = analyses.project_id
+        WHERE transcripts.project_id = ${projectId}
         AND transcripts.user_id = ${req.user.id}
     `;
 
@@ -89,24 +87,4 @@ export const postProject = async (req: Request, res: Response) => {
 
     res.status(201);
     res.json({ id: Number(newId) });
-};
-
-export const linkTranscriptsToProject = async (req: Request, res: Response) => {
-    const { projectId } = req.params;
-    const { transcripts } = req.body as { transcripts: string[] };
-
-    if (projectId === undefined || Array.isArray(projectId)) {
-        res.status(400);
-        return;
-    }
-
-    for (const transcriptId of transcripts) {
-        await sql`
-            INSERT INTO projects_transcripts (project_id, transcript_id)
-            VALUES (${projectId}, ${transcriptId})
-        `;
-    }
-
-    res.status(201);
-    res.json({ message: `${transcripts.length} transcripts linked` });
 };
