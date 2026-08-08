@@ -101,7 +101,7 @@ export const getProjectDashboard = async (req: Request, res: Response) => {
 };
 
 export const postProject = async (req: Request, res: Response) => {
-    const { title, description } = req.body;
+    const { title, description, children } = req.body;
 
     const rows = await sql<{ id: number }[]>`
     INSERT INTO projects (user_id, title, description)
@@ -113,6 +113,12 @@ export const postProject = async (req: Request, res: Response) => {
         res.status(500);
         res.json({ error: "There was an issue inserting project" });
         return;
+    }
+
+    for (const child of children) {
+        await sql<{ id: number }[]>`
+            INSERT INTO children (project_id, name)
+            VALUES (${newId}, ${child}) RETURNING id`;
     }
 
     res.status(201);
