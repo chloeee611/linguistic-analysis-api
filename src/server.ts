@@ -9,6 +9,7 @@ import analysisRouter from "./routes/analysis-routes";
 import projectRouter from "./routes/project-routes";
 import loginRouter from "./routes/login-routes";
 import userRouter from "./routes/user-routes";
+import taskRouter from "./routes/task-routes";
 import express from "express";
 import cors from "cors";
 
@@ -21,17 +22,12 @@ app.use(json());
 app.use(cors());
 
 // Routes
-app.use("/api/register", registerRouter);
 app.use("/api/login", loginRouter);
+app.use("/api/register", registerRouter);
 app.use("/api/users", validateJwt, userRouter);
+app.use("/api/tasks", validateJwt, taskRouter);
 app.use("/api/projects", validateJwt, projectRouter);
 app.use("/api/analysis", validateJwt, analysisRouter);
-
-// Error handling middleware
-// app.use((err: Error, _: Request, res: Response) => {
-//     console.error(err);
-//     res.status(500).json({ message: "Something went wrong!" });
-// });
 
 // Start server
 app.listen(PORT, () => {

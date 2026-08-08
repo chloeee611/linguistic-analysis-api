@@ -1,9 +1,4 @@
-import {
-    postProject,
-    getAllProjects,
-    getProject,
-    getProjectSummary,
-} from "../controllers/project-controller";
+import { postProject, getAllProjects, getProject, getProjectDashboard } from "../controllers/project-controller";
 import {
     getAllTranscripts,
     getTranscript,
@@ -20,12 +15,12 @@ const router = express.Router({ mergeParams: true });
 
 router.get("/", getAllProjects);
 router.get("/:projectId", getProject);
-router.get("/:projectId/summary", getProjectSummary);
+router.get("/:projectId/dashboard", getProjectDashboard);
 router.post("/", postProject);
 
 router.get("/:projectId/transcripts", getAllTranscripts);
 router.get("/:projectId/transcripts/:transcriptId", getTranscript);
 router.get("/:projectId/transcripts/:transcriptId/content", getTranscriptContent);
-router.post("/:projectId/transcripts", upload.single("uploaded_file"), postTranscript);
+router.post("/:projectId/transcripts", upload.array("uploaded_file"), postTranscript);
 
 export default router;

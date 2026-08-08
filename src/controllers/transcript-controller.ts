@@ -116,65 +116,118 @@ export const postTranscript = async (req: Request, res: Response) => {
     }
 
     // Upload file using standard upload
-    if (!req.file?.path) {
+    if (!Array.isArray(req.files)) {
         res.status(400);
-        res.json({ message: "Invalid file" });
+        res.json({ message: "Invalid files" });
         return;
     }
 
-    let file = await fs.readFile(req.file.path, "utf8");
+    // Cast to 'never' is required due to this issue: https://github.com/porsager/postgres/issues/958
+    const task = await sql<{ id: number }[]>`
+            INSERT INTO tasks (type, status, user_id, content)
+            VALUES ('transcript_upload', 'running', ${req.user.id}, ${{ transcriptsCompleted: 0, totalTranscripts: req.files.length } as never})
+            RETURNING id
+        `;
 
-    const { error, data } = await supabase.storage.from("transcripts").upload(`${req.user.id}/${uuidv4()}`, file);
+    const taskId = task[0]?.id;
 
-    // TODO: make all async queries run at once
-
-    const transcriptArray = transcriptToArray(file);
-    const transcriptArrayNoMetadata = removeTranscriptMetadata(transcriptArray);
-    const compiledTranscript = compileTranscript(transcriptArrayNoMetadata);
-
-    if (error) {
-        // Handle error
-        console.error(error);
-        res.json(error);
-        fs.unlink(req.file.path);
-        return;
-    }
-
-    const { data: metadata } = await api.post(`transcript/metadata`, {
-        urls: [data.path],
-    });
-
-    const rows = await sql<{ id: number }[]>`
-        INSERT INTO transcripts (title, file_url, user_id, metadata, parsed_content, project_id)
-        VALUES (${req.file.originalname}, ${data.path}, ${req.user.id}, ${metadata[data.path]}, ${compiledTranscript}, ${projectId})
-        RETURNING id
-    `;
-
-    const newId = rows[0]?.id;
-
-    if (newId === undefined) {
+    if (!taskId) {
         res.status(500);
-        res.json({ error: "There was an issue inserting transcript" });
-        fs.unlink(req.file.path);
+        res.json({ message: "Failed to create task" });
         return;
     }
 
-    try {
-        const transcriptObject = [{ id: newId, file_url: data.path }];
+    res.status(202);
+    res.contentType("application/json");
+    res.location(`/tasks/${taskId}`);
+    res.json({ message: "Task created", location: `/tasks/${taskId}` });
 
-        const lexRarePromise = processAnalysisQuery("lexrare", req.user.id, projectId, transcriptObject);
-        const mluPromise = processAnalysisQuery("mlu", req.user.id, projectId, transcriptObject);
-        const frqPromise = processAnalysisQuery("freq", req.user.id, projectId, transcriptObject);
+    let transcriptsCompleted: number = 0;
 
-        await Promise.all([lexRarePromise, mluPromise, frqPromise]);
-    } catch (err) {
-        res.status(500);
-        res.json({ error: err });
-        return;
+    for (const file of req.files) {
+        let fileUtf = await fs.readFile(file.path, "utf8");
+
+        const { error, data } = await supabase.storage
+            .from("transcripts")
+            .upload(`${req.user.id}/${uuidv4()}`, fileUtf);
+
+        if (error) {
+            // Handle error
+            console.error(error);
+            await sql<{ id: number }[]>`
+                UPDATE tasks 
+                SET status = 'failed', content = ${error.message}
+                WHERE id = ${taskId}
+            `;
+            await fs.unlink(file.path);
+            return;
+        }
+
+        const transcriptArray = transcriptToArray(fileUtf);
+        const transcriptArrayNoMetadata = removeTranscriptMetadata(transcriptArray);
+        const compiledTranscript = compileTranscript(transcriptArrayNoMetadata);
+
+        const { data: metadata } = await api.post(`transcript/metadata`, {
+            urls: [{ file_url: data.path, id: data.id }],
+        });
+
+        const rows = await sql<{ id: number }[]>`
+            INSERT INTO transcripts (title, file_url, user_id, metadata, parsed_content, project_id)
+            VALUES (${file.originalname}, ${data.path}, ${req.user.id}, ${metadata[data.id]}, ${compiledTranscript}, ${projectId})
+            RETURNING id
+        `;
+
+        const newId = rows[0]?.id;
+
+        if (newId === undefined) {
+            const error = { errorMessage: "There was an issue inserting transcript" };
+
+            await sql<{ id: string }[]>`
+                UPDATE tasks 
+                SET status = 'failed', content = ${{ error } as never}
+                WHERE id = ${taskId}
+            `;
+            await fs.unlink(file.path);
+            return;
+        }
+
+        try {
+            const transcriptObject = [{ id: newId, file_url: data.path }];
+
+            const lexRarePromise = processAnalysisQuery("lexrare", req.user.id, projectId, transcriptObject, {
+                target_tier: "mor",
+            });
+            const mluPromise = processAnalysisQuery("mlu", req.user.id, projectId, transcriptObject);
+            const frqPromise = processAnalysisQuery("freq", req.user.id, projectId, transcriptObject);
+
+            await Promise.all([lexRarePromise, mluPromise, frqPromise]);
+        } catch (error) {
+            const errorMessage =
+                error && typeof error === "object" && "message" in error && typeof error.message === "string"
+                    ? error.message
+                    : "";
+
+            await sql<{ id: number }[]>`
+                UPDATE tasks 
+                SET status = 'failed', content = ${{ errorMessage } as never}
+                WHERE id = ${taskId}
+            `;
+            await fs.unlink(file.path);
+            return;
+        }
+
+        transcriptsCompleted += 1;
+
+        await sql<{ id: number }[]>`
+            UPDATE tasks 
+            SET content = ${{ transcriptsCompleted, totalTranscripts: req.files.length } as never}
+            WHERE id = ${taskId}`;
+
+        await fs.unlink(file.path);
     }
 
-    res.status(200);
-    res.json({ id: newId });
-
-    fs.unlink(req.file.path);
+    await sql<{ id: number }[]>`
+            UPDATE tasks 
+            SET status = 'success', content = ${{ transcriptsCompleted, totalTranscripts: req.files.length } as never}
+            WHERE id = ${taskId}`;
 };
