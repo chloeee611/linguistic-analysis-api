@@ -1,4 +1,10 @@
-import { postProject, getAllProjects, getProject, getProjectDashboard } from "../controllers/project-controller";
+import {
+    postProject,
+    getAllProjects,
+    getProject,
+    getProjectDashboard,
+    getProjectChildren,
+} from "../controllers/project-controller";
 import {
     getAllTranscripts,
     getTranscript,
@@ -15,6 +21,7 @@ const router = express.Router({ mergeParams: true });
 
 router.get("/", getAllProjects);
 router.get("/:projectId", getProject);
+router.get("/:projectId/children", getProjectChildren);
 router.get("/:projectId/dashboard", getProjectDashboard);
 router.post("/", postProject);
 

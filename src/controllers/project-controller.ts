@@ -1,8 +1,6 @@
 import { Request, Response } from "express";
-import { LexRareReturn } from "../model/analysis.types";
 import { Project } from "../model/project.types";
 
-import moment from "moment";
 import sql from "../external/db";
 
 export const getAllProjects = async (req: Request, res: Response) => {
@@ -43,9 +41,33 @@ export const getProject = async (req: Request, res: Response) => {
     res.json(projects[0]);
 };
 
+export const getProjectChildren = async (req: Request, res: Response) => {
+    const { projectId } = req.params;
+
+    if (projectId === undefined || Array.isArray(projectId)) {
+        res.status(400);
+        return;
+    }
+
+    const children = await sql<Project[]>`
+        SELECT *
+        FROM children
+        WHERE project_id = ${projectId}
+    `;
+
+    if (children.length === 0) {
+        res.status(200).json([]);
+        return;
+    }
+
+    res.status(200);
+    res.json(children);
+};
+
 type ProjectDashboardLex = {
-    result: LexRareReturn;
-    date: string;
+    name: string;
+    result: number;
+    age: string;
 };
 
 export const getProjectDashboard = async (req: Request, res: Response) => {
@@ -58,17 +80,19 @@ export const getProjectDashboard = async (req: Request, res: Response) => {
 
     // Gathers data from transcripts, analyses, and analyses_transcripts for the graph
     const lexRareResults = await sql<ProjectDashboardLex[]>`
-        SELECT transcripts.id, MAX(analyses.created_at), jsonb_path_query(transcripts.metadata, '$.date') as date, analyses_transcripts.result
+        SELECT transcripts.id, MAX(analyses.created_at), jsonb_path_query(transcripts.metadata, '$.id.CHI.age') as age, jsonb_path_query(analyses_transcripts.result, '$.CHI.percent_rare_words') as result, children.name
         FROM analyses_transcripts
         INNER JOIN transcripts
         ON analyses_transcripts.transcript_id = transcripts.id
         INNER JOIN analyses
         ON analyses_transcripts.analysis_id = analyses.id
+        INNER JOIN children
+        ON transcripts.child_id = children.id
         WHERE transcripts.project_id = ${projectId}
         AND transcripts.user_id = ${req.user.id}
         AND analyses.type = 'lexrare'
-        GROUP BY transcripts.id, analyses_transcripts.result
-        ORDER BY date ASC
+        GROUP BY transcripts.id, analyses_transcripts.result, children.name
+        ORDER BY age ASC
     `;
 
     if (lexRareResults.length === 0) {
@@ -82,22 +106,26 @@ export const getProjectDashboard = async (req: Request, res: Response) => {
     // Aggregates all speakers and their rare words data
     const keys: Record<string, string> = {};
 
-    const lexGraph = lexRareResults.map(({ date: dateString, result }) => {
-        const date = moment(dateString).format("DD-MM-YY");
-        const resultValues = Object.values(result);
+    const store: Record<string, Record<string, number>> = {};
 
-        const yAxis: Record<string, number> = {};
-
-        for (const { code, percent_rare_words } of resultValues) {
-            keys[code] = "#" + ((Math.random() * 0xffffff) << 0).toString(16).padStart(6, "0");
-            yAxis[code] = percent_rare_words * 100;
+    for (const { name, age, result } of lexRareResults) {
+        if (!(age in store)) {
+            store[age] = { [name]: result };
+        } else {
+            store[age] = { ...store[age], [name]: result };
         }
 
-        return { date, ...yAxis };
+        if (!(name in keys)) {
+            keys[name] = "#" + ((Math.random() * 0xffffff) << 0).toString(16).padStart(6, "0");
+        }
+    }
+
+    const graphData = Object.entries(store).flatMap(([age, data]) => {
+        return { age, ...data };
     });
 
     res.status(200);
-    res.json({ data: lexGraph, keys });
+    res.json({ data: graphData, keys });
 };
 
 export const postProject = async (req: Request, res: Response) => {

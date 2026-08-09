@@ -97,7 +97,7 @@ export const getTranscriptContent = async (req: Request, res: Response) => {
         `/transcripts/${transcriptId}/content`,
         pageNumber,
         pageSizeNumber,
-        parsedContent.length,
+        parsedContent.length
     );
 
     res.status(200);
@@ -172,8 +172,8 @@ export const postTranscript = async (req: Request, res: Response) => {
         });
 
         const rows = await sql<{ id: number }[]>`
-            INSERT INTO transcripts (title, file_url, user_id, metadata, parsed_content, project_id)
-            VALUES (${file.originalname}, ${data.path}, ${req.user.id}, ${metadata[data.id]}, ${compiledTranscript}, ${projectId})
+            INSERT INTO transcripts (title, file_url, user_id, metadata, parsed_content, project_id, child_id)
+            VALUES (${file.originalname}, ${data.path}, ${req.user.id}, ${metadata[data.id]}, ${compiledTranscript}, ${projectId}, ${req.body.child_id})
             RETURNING id
         `;
 
