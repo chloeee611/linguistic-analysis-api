@@ -25,10 +25,12 @@ export const getAllTranscripts = async (req: Request, res: Response) => {
     }
 
     const transcripts = await sql<Transcript[]>`
-        SELECT id, title, file_url, created_at, user_id, project_id, metadata
+        SELECT transcripts.id, transcripts.title, transcripts.file_url, transcripts.created_at, transcripts.user_id, transcripts.project_id, transcripts.metadata, transcripts.child_id, children.name as child_name
         FROM transcripts
-        WHERE user_id = ${req.user.id}
-        AND project_id = ${projectId}
+        LEFT JOIN children
+        ON transcripts.child_id = children.id
+        WHERE transcripts.user_id = ${req.user.id}
+        AND transcripts.project_id = ${projectId}
     `;
 
     res.status(200);
@@ -44,11 +46,13 @@ export const getTranscript = async (req: Request, res: Response) => {
     }
 
     const transcripts = await sql<Transcript[]>`
-        SELECT id, title, file_url, created_at, user_id, project_id, metadata
+        SELECT transcripts.id, transcripts.title, transcripts.file_url, transcripts.created_at, transcripts.user_id, transcripts.project_id, transcripts.metadata, transcripts.child_id, children.name as child_name
         FROM transcripts
-        WHERE id = ${transcriptId}
-        AND user_id= ${req.user.id}
-        AND project_id = ${projectId}
+        LEFT JOIN children
+        ON transcripts.child_id = children.id
+        WHERE transcripts.id = ${transcriptId}
+        AND transcripts.user_id= ${req.user.id}
+        AND transcripts.project_id = ${projectId}
     `;
 
     res.status(200);
