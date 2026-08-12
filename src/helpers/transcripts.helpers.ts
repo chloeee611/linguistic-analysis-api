@@ -1,8 +1,4 @@
-import {
-    TranscriptContent,
-    TranscriptMor,
-    TranscriptGra,
-} from "../model/transcript.types";
+import { TranscriptContent, TranscriptMor, TranscriptGra } from "../model/transcript.types";
 
 export const transcriptToArray = (transcript: string) => {
     return transcript.split("\n");
@@ -43,10 +39,7 @@ export const compileTranscript = (transcript: string[]): any[] => {
             currentTranscript.speaker = type.replace("*", "").replace(":", "");
             currentTranscript.utterance = content;
         } else if (type.charAt(0) === "%") {
-            const parsedType = type
-                .replace("%", "")
-                .replace(":", "")
-                .toLowerCase();
+            const parsedType = type.replace("%", "").replace(":", "").toLowerCase();
 
             if (parsedType === "mor") {
                 currentTranscript[parsedType] = compileMor(content);
@@ -95,12 +88,4 @@ const compileGra = (line: string) => {
     }
 
     return graBuilder;
-};
-
-export const sliceTranscript = (
-    transcript: TranscriptContent[],
-    page: number,
-    pageSize: number,
-) => {
-    return transcript.slice(page * pageSize, (page + 1) * pageSize);
 };

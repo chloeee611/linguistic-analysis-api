@@ -1,10 +1,5 @@
-import {
-    compileTranscript,
-    removeTranscriptMetadata,
-    sliceTranscript,
-    transcriptToArray,
-} from "../helpers/transcripts.helpers";
-import { generatePaginationLinksAndMeta } from "../helpers/pagination.helpers";
+import { compileTranscript, removeTranscriptMetadata, transcriptToArray } from "../helpers/transcripts.helpers";
+import { generatePaginationLinksAndMeta, slicePages } from "../helpers/pagination.helpers";
 import { processAnalysisQuery } from "../helpers/analysis.helpers";
 import { validateParamString } from "../helpers/validation.helpers";
 import { Request, Response } from "express";
@@ -18,11 +13,20 @@ import fs from "fs/promises";
 
 export const getAllTranscripts = async (req: Request, res: Response) => {
     const { projectId } = req.params;
+    const { page = "1", pageSize = "25", children } = req.query;
 
-    if (!validateParamString(projectId)) {
+    if ((children && typeof children !== "string") || !validateParamString(projectId)) {
         res.status(400);
+        res.json({ message: "Invalid params" });
         return;
     }
+
+    const childrenFiltered = children ? decodeURIComponent(children).split(",") : [];
+
+    const childrenWhere =
+        childrenFiltered.length > 0 ? sql`AND transcripts.child_id IN ${sql(childrenFiltered)}` : sql``;
+
+    console.log(`transcript-controller.ts:29 || childrenFiltered:`, childrenFiltered);
 
     const transcripts = await sql<Transcript[]>`
         SELECT transcripts.id, transcripts.title, transcripts.file_url, transcripts.created_at, transcripts.user_id, transcripts.project_id, transcripts.metadata, transcripts.child_id, children.name as child_name
@@ -31,10 +35,23 @@ export const getAllTranscripts = async (req: Request, res: Response) => {
         ON transcripts.child_id = children.id
         WHERE transcripts.user_id = ${req.user.id}
         AND transcripts.project_id = ${projectId}
+        ${childrenWhere}
     `;
 
+    const pageNumber = Number(page);
+    const pageSizeNumber = Number(pageSize);
+
+    const slicedContent = slicePages(transcripts, pageNumber - 1, pageSizeNumber);
+
+    const linksAndMetaObject = generatePaginationLinksAndMeta(
+        `/transcripts`,
+        pageNumber,
+        pageSizeNumber,
+        transcripts.length
+    );
+
     res.status(200);
-    res.json(transcripts);
+    res.json({ results: slicedContent, ...linksAndMetaObject });
 };
 
 export const getTranscript = async (req: Request, res: Response) => {
@@ -95,7 +112,7 @@ export const getTranscriptContent = async (req: Request, res: Response) => {
         return;
     }
 
-    const slicedContent = sliceTranscript(parsedContent, pageNumber - 1, pageSizeNumber);
+    const slicedContent = slicePages(parsedContent, pageNumber - 1, pageSizeNumber);
 
     const linksAndMetaObject = generatePaginationLinksAndMeta(
         `/transcripts/${transcriptId}/content`,
@@ -106,7 +123,7 @@ export const getTranscriptContent = async (req: Request, res: Response) => {
 
     res.status(200);
     res.json({
-        content: slicedContent,
+        results: slicedContent,
         ...linksAndMetaObject,
     });
 };

@@ -13,11 +13,15 @@ export type PaginationMeta = {
     lastPage: number;
 };
 
+export const slicePages = <T extends unknown>(transcript: T[], page: number, pageSize: number) => {
+    return transcript.slice(page * pageSize, (page + 1) * pageSize);
+};
+
 export const generatePaginationLinksAndMeta = (
     url: string,
     currentPage: number,
     currentPageSize: number,
-    totalSize: number,
+    totalSize: number
 ) => {
     const lastPage = Math.ceil(totalSize / currentPageSize);
 
