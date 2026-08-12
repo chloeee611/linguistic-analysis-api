@@ -1,3 +1,4 @@
+import { validateParamString } from "../helpers/validation.helpers";
 import { Request, Response } from "express";
 import { Project } from "../model/project.types";
 
@@ -23,10 +24,10 @@ export const getProject = async (req: Request, res: Response) => {
     }
 
     const projects = await sql<Project[]>`
-        SELECT *
+        SELECT projects.id, projects.title, projects.description
         FROM projects
-        WHERE id = ${projectId}
-        AND user_id = ${req.user.id}
+        WHERE projects.id = ${projectId}
+        AND projects.user_id = ${req.user.id}
     `;
 
     if (projects.length === 0) {
@@ -73,8 +74,9 @@ type ProjectDashboardLex = {
 export const getProjectDashboard = async (req: Request, res: Response) => {
     const { projectId } = req.params;
 
-    if (projectId === undefined || Array.isArray(projectId)) {
+    if (!validateParamString(projectId)) {
         res.status(400);
+        res.json("Invalid project ID");
         return;
     }
 
@@ -126,6 +128,30 @@ export const getProjectDashboard = async (req: Request, res: Response) => {
 
     res.status(200);
     res.json({ data: graphData, keys });
+};
+
+export const putProject = async (req: Request, res: Response) => {
+    const { projectId } = req.params;
+    const { title, description, children } = req.body;
+
+    if (!validateParamString(projectId)) {
+        res.status(400);
+        res.json("Invalid project ID");
+        return;
+    }
+
+    await sql<{ id: number }[]>`
+        UPDATE projects SET title = ${title}, description = ${description}
+        WHERE id = ${projectId}`;
+
+    for (const child of children) {
+        await sql<{ id: number }[]>`
+            INSERT INTO children (project_id, name)
+            VALUES (${projectId}, ${child}) RETURNING id`;
+    }
+
+    res.status(200);
+    res.json({ message: "Project updated" });
 };
 
 export const postProject = async (req: Request, res: Response) => {

@@ -4,6 +4,7 @@ import {
     getProject,
     getProjectDashboard,
     getProjectChildren,
+    putProject,
 } from "../controllers/project-controller";
 import {
     getAllTranscripts,
@@ -24,6 +25,7 @@ router.get("/:projectId", getProject);
 router.get("/:projectId/children", getProjectChildren);
 router.get("/:projectId/dashboard", getProjectDashboard);
 router.post("/", postProject);
+router.put("/:projectId", putProject);
 
 router.get("/:projectId/transcripts", getAllTranscripts);
 router.get("/:projectId/transcripts/:transcriptId", getTranscript);
