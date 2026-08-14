@@ -1,5 +1,6 @@
 import { validateParamString } from "../helpers/validation.helpers";
 import { Request, Response } from "express";
+import { generateSummary } from "../helpers/analysis.helpers";
 import { Project } from "../model/project.types";
 
 import sql from "../external/db";
@@ -65,12 +66,6 @@ export const getProjectChildren = async (req: Request, res: Response) => {
     res.json(children);
 };
 
-type ProjectDashboardLex = {
-    name: string;
-    result: number;
-    age: string;
-};
-
 export const getProjectDashboard = async (req: Request, res: Response) => {
     const { projectId } = req.params;
 
@@ -80,54 +75,35 @@ export const getProjectDashboard = async (req: Request, res: Response) => {
         return;
     }
 
-    // Gathers data from transcripts, analyses, and analyses_transcripts for the graph
-    const lexRareResults = await sql<ProjectDashboardLex[]>`
-        SELECT transcripts.id, MAX(analyses.created_at), jsonb_path_query(transcripts.metadata, '$.id.CHI.age') as age, jsonb_path_query(analyses_transcripts.result, '$.CHI.percent_rare_words') as result, children.name
-        FROM analyses_transcripts
-        INNER JOIN transcripts
-        ON analyses_transcripts.transcript_id = transcripts.id
-        INNER JOIN analyses
-        ON analyses_transcripts.analysis_id = analyses.id
-        INNER JOIN children
-        ON transcripts.child_id = children.id
-        WHERE transcripts.project_id = ${projectId}
-        AND transcripts.user_id = ${req.user.id}
-        AND analyses.type = 'lexrare'
-        GROUP BY transcripts.id, analyses_transcripts.result, children.name
-        ORDER BY age ASC
-    `;
+    const currentColourKeys: Record<string, string> = {};
 
-    if (lexRareResults.length === 0) {
-        res.status(200).json({
-            message: "Lex not found",
-        });
-
-        return;
-    }
-
-    // Aggregates all speakers and their rare words data
-    const keys: Record<string, string> = {};
-
-    const store: Record<string, Record<string, number>> = {};
-
-    for (const { name, age, result } of lexRareResults) {
-        if (!(age in store)) {
-            store[age] = { [name]: result };
-        } else {
-            store[age] = { ...store[age], [name]: result };
-        }
-
-        if (!(name in keys)) {
-            keys[name] = "#" + ((Math.random() * 0xffffff) << 0).toString(16).padStart(6, "0");
-        }
-    }
-
-    const graphData = Object.entries(store).flatMap(([age, data]) => {
-        return { age, ...data };
-    });
+    const lexrare = await generateSummary(
+        "lexrare",
+        "Percentage Use of Rare Words",
+        "$.CHI.percent_rare_words",
+        projectId,
+        req.user.id,
+        currentColourKeys
+    );
+    const mlu = await generateSummary(
+        "mlu",
+        "Mean Length of Utterance",
+        "$.counts.CHI.mlu",
+        projectId,
+        req.user.id,
+        currentColourKeys
+    );
+    const freq = await generateSummary(
+        "freq",
+        "Spoken Words Over Time",
+        "$.CHI.summary.total_items",
+        projectId,
+        req.user.id,
+        currentColourKeys
+    );
 
     res.status(200);
-    res.json({ data: graphData, keys });
+    res.json({ graphData: { lexrare, mlu, freq }, colourKeys: currentColourKeys });
 };
 
 export const putProject = async (req: Request, res: Response) => {

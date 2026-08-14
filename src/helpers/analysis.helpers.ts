@@ -9,7 +9,7 @@ export const processAnalysisQuery = async <T extends AnalysisType>(
     userId: number,
     projectId: string,
     transcripts: Pick<Transcript, "id" | "file_url">[],
-    args?: AnalysisArgs[T],
+    args?: AnalysisArgs[T]
 ) => {
     const requestBody: any = {
         urls: transcripts.map(({ file_url, id }) => ({ file_url, id })),
@@ -40,4 +40,68 @@ export const processAnalysisQuery = async <T extends AnalysisType>(
     }
 
     return newId;
+};
+
+type ProjectDashboardGraph = {
+    name: string;
+    result: number;
+    age: string;
+};
+
+export const generateSummary = async (
+    type: AnalysisType,
+    title: string,
+    jsonSearch: string,
+    projectId: string,
+    userId: number,
+    currentColourKeys: Record<string, string>
+) => {
+    const rows = await sql<ProjectDashboardGraph[]>`
+        SELECT transcripts.id, MAX(analyses.created_at), jsonb_path_query(transcripts.metadata, '$.id.CHI.age') as age, jsonb_path_query(analyses_transcripts.result, ${jsonSearch}) as result, children.name
+        FROM analyses_transcripts
+        INNER JOIN transcripts
+        ON analyses_transcripts.transcript_id = transcripts.id
+        INNER JOIN analyses
+        ON analyses_transcripts.analysis_id = analyses.id
+        INNER JOIN children
+        ON transcripts.child_id = children.id
+        WHERE transcripts.project_id = ${projectId}
+        AND transcripts.user_id = ${userId}
+        AND analyses.type = ${type}
+        GROUP BY transcripts.id, analyses_transcripts.result, children.name
+        ORDER BY age ASC
+    `;
+
+    if (rows.length === 0) {
+        return;
+    }
+
+    const store: Record<string, Record<string, number>> = {};
+    const keys = new Set<string>();
+
+    for (const { name, age, result } of rows) {
+        if (!(age in store)) {
+            store[age] = { [name]: result };
+        } else {
+            store[age] = { ...store[age], [name]: result };
+        }
+
+        if (!(name in keys)) {
+            keys.add(name);
+        }
+
+        if (!(name in currentColourKeys)) {
+            currentColourKeys[name] = "#" + ((Math.random() * 0xffffff) << 0).toString(16).padStart(6, "0");
+        }
+    }
+
+    const graphData = Object.entries(store).flatMap(([age, data]) => {
+        return { age, ...data };
+    });
+
+    return {
+        title,
+        data: graphData,
+        keys: Array.from(keys),
+    };
 };
