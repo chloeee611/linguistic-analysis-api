@@ -5,7 +5,7 @@ import sql from "../external/db";
 
 export const getAllUsers = async (_: Request, res: Response) => {
     const users = await sql<User[]>`
-        SELECT id, name, email, bio, research_field, location, TO_CHAR(dob, 'yyyy-mm-dd') as dob
+        SELECT id, name, username, email, bio, research_field, location, TO_CHAR(dob, 'yyyy-mm-dd') as dob
         FROM users
     `;
 
@@ -22,7 +22,7 @@ export const getUser = async (req: Request, res: Response) => {
     }
 
     const users = await sql<User[]>`
-        SELECT id, name, email, bio, research_field, location, TO_CHAR(dob, 'yyyy-mm-dd') as dob
+        SELECT id, name, username, email, bio, research_field, location, TO_CHAR(dob, 'yyyy-mm-dd') as dob
         FROM users
         WHERE users.id = ${id}
     `;
@@ -40,7 +40,7 @@ export const getMe = async (req: Request, res: Response) => {
     }
 
     const users = await sql<User[]>`
-        SELECT id, name, email, bio, research_field, location, TO_CHAR(dob, 'yyyy-mm-dd') as dob
+        SELECT id, name, username, email, bio, research_field, location, TO_CHAR(dob, 'yyyy-mm-dd') as dob
         FROM users
         WHERE users.id = ${id}
     `;

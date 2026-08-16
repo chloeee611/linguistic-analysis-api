@@ -26,8 +26,6 @@ export const getAllTranscripts = async (req: Request, res: Response) => {
     const childrenWhere =
         childrenFiltered.length > 0 ? sql`AND transcripts.child_id IN ${sql(childrenFiltered)}` : sql``;
 
-    console.log(`transcript-controller.ts:29 || childrenFiltered:`, childrenFiltered);
-
     const transcripts = await sql<Transcript[]>`
         SELECT transcripts.id, transcripts.title, transcripts.file_url, transcripts.created_at, transcripts.user_id, transcripts.project_id, transcripts.metadata, transcripts.child_id, children.name as child_name
         FROM transcripts
