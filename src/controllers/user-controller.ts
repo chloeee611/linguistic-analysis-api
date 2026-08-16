@@ -1,3 +1,4 @@
+import { validateRequiredString, validateEmail, validateDob } from "../helpers/validation.helpers";
 import { Request, Response } from "express";
 import { User } from "../model/user.types";
 import sql from "../external/db";
@@ -54,6 +55,36 @@ export const putUserDetails = async (req: Request, res: Response) => {
 
     if (id === undefined || Array.isArray(id)) {
         res.status(400);
+        return;
+    }
+
+    const validationResults: Record<string, string> = {};
+
+    if (!validateEmail(email)) {
+        validationResults.email = "Invalid email address";
+    }
+
+    if (!validateDob(dob)) {
+        validationResults.dob = "Invalid date of birth";
+    }
+
+    if (!validateRequiredString(bio)) {
+        validationResults.bio = "Bio is required";
+    }
+
+    if (!validateRequiredString(research_field)) {
+        validationResults.research_field = "Research field is required";
+    }
+
+    if (!validateRequiredString(location)) {
+        validationResults.location = "Location is required";
+    }
+
+    if (Object.keys(validationResults).length > 0) {
+        res.status(400).json({
+            message: "Validation error",
+            validationResults,
+        });
         return;
     }
 

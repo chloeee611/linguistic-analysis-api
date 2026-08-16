@@ -1,4 +1,4 @@
-import { validateParamString } from "../helpers/validation.helpers";
+import { validateParamString, validateRequiredString } from "../helpers/validation.helpers";
 import { Request, Response } from "express";
 import { generateSummary } from "../helpers/analysis.helpers";
 import { Project } from "../model/project.types";
@@ -132,6 +132,24 @@ export const putProject = async (req: Request, res: Response) => {
 
 export const postProject = async (req: Request, res: Response) => {
     const { title, description, children } = req.body;
+
+    const validationResults: Record<string, string> = {};
+
+    if (!validateRequiredString(title)) {
+        validationResults.title = "Project title is required";
+    }
+
+    if (!validateRequiredString(description)) {
+        validationResults.description = "Project description is required";
+    }
+
+    if (Object.keys(validationResults).length > 0) {
+        res.status(400).json({
+            message: "Validation error",
+            validationResults,
+        });
+        return;
+    }
 
     const rows = await sql<{ id: number }[]>`
     INSERT INTO projects (user_id, title, description)
