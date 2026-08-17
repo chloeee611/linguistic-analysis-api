@@ -97,3 +97,29 @@ export const putUserDetails = async (req: Request, res: Response) => {
     res.status(200);
     res.json(users);
 };
+
+export const getDashboard = async (req: Request, res: Response) => {
+    const projects = await sql<{ count: string }[]>`
+        SELECT COUNT(*) AS count
+        FROM projects
+        WHERE user_id = ${req.user.id}
+    `;
+
+    const transcripts = await sql<{ count: string }[]>`
+        SELECT COUNT(*) AS count
+        FROM transcripts
+        WHERE user_id = ${req.user.id}
+    `;
+
+    const analyses = await sql<{ count: string }[]>`
+        SELECT COUNT(*) AS count
+        FROM analyses
+        WHERE user_id = ${req.user.id}
+    `;
+
+    res.status(200).json({
+        projectCount: Number(projects[0]?.count ?? 0),
+        transcriptCount: Number(transcripts[0]?.count ?? 0),
+        analysisCount: Number(analyses[0]?.count ?? 0),
+    });
+};
