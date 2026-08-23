@@ -91,7 +91,8 @@ export const generateSummary = async (
         }
 
         if (!(name in currentColourKeys)) {
-            currentColourKeys[name] = "#" + ((Math.random() * 0xffffff) << 0).toString(16).padStart(6, "0");
+            const currentKeyCount = Object.keys(currentColourKeys).length + 1;
+            currentColourKeys[name] = `hsl(${currentKeyCount * 137.508},70%,50%)`;
         }
     }
 
