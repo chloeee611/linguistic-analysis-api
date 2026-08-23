@@ -12,6 +12,7 @@ import {
     getTranscriptContent,
     postTranscript,
 } from "../controllers/transcript-controller";
+import { getAnalyses } from "../controllers/analysis-controller";
 
 import express from "express";
 import multer from "multer";
@@ -20,6 +21,7 @@ const upload = multer({ dest: "uploads/" });
 
 const router = express.Router({ mergeParams: true });
 
+// Projects
 router.get("/", getAllProjects);
 router.get("/:projectId", getProject);
 router.get("/:projectId/children", getProjectChildren);
@@ -27,9 +29,13 @@ router.get("/:projectId/dashboard", getProjectDashboard);
 router.post("/", postProject);
 router.put("/:projectId", putProject);
 
+// Transcripts
 router.get("/:projectId/transcripts", getAllTranscripts);
 router.get("/:projectId/transcripts/:transcriptId", getTranscript);
 router.get("/:projectId/transcripts/:transcriptId/content", getTranscriptContent);
 router.post("/:projectId/transcripts", upload.array("uploaded_file"), postTranscript);
+
+// Analysis
+router.get("/:projectId/analysis", getAnalyses);
 
 export default router;

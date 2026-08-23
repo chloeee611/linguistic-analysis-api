@@ -1,3 +1,8 @@
+export type Analysis = {
+    id: number;
+    type: string;
+};
+
 export type AnalysisType = "kwal" | "mlu" | "freq" | "lexrare";
 
 export type LexRareReturn = {
