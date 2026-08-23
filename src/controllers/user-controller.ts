@@ -99,27 +99,48 @@ export const putUserDetails = async (req: Request, res: Response) => {
 };
 
 export const getDashboard = async (req: Request, res: Response) => {
+    // Total number of projects
     const projects = await sql<{ count: string }[]>`
         SELECT COUNT(*) AS count
         FROM projects
         WHERE user_id = ${req.user.id}
     `;
 
+    // Total number of transcripts
     const transcripts = await sql<{ count: string }[]>`
         SELECT COUNT(*) AS count
         FROM transcripts
         WHERE user_id = ${req.user.id}
     `;
 
+    // Total number of analyses
     const analyses = await sql<{ count: string }[]>`
         SELECT COUNT(*) AS count
         FROM analyses
         WHERE user_id = ${req.user.id}
     `;
 
+    // Total number of analyses this week
+    const now = new Date();
+
+    const startOfWeek = new Date(now);
+    const day = startOfWeek.getDay();
+    const diff = day === 0 ? 6 : day - 1;
+
+    startOfWeek.setDate(startOfWeek.getDate() - diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const analysesThisWeek = await sql<{ count: string }[]>`
+        SELECT COUNT(*) AS count
+        FROM analyses
+        WHERE user_id = ${req.user.id}
+        AND created_at >= ${startOfWeek}
+    `;
+
     res.status(200).json({
         projectCount: Number(projects[0]?.count ?? 0),
         transcriptCount: Number(transcripts[0]?.count ?? 0),
         analysisCount: Number(analyses[0]?.count ?? 0),
+        weeklyAnalysisCount: Number(analysesThisWeek[0]?.count ?? 0),
     });
 };
