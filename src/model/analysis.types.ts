@@ -12,7 +12,9 @@ export type LexRareReturn = {
 
 export type AnalysisArgs = {
     kwal: {
-        search_utterance?: string;
+        search_utterance?: string[];
+        mor_filters?: string[];
+        gra_filters?: string[];
     };
     mlu: {};
     freq: {
