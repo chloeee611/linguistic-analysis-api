@@ -5,7 +5,7 @@ export const postFreq = async (req: Request, res: Response) => {
     const { project_id, search, transcripts } = req.body;
 
     try {
-        const newId = processAnalysisQuery("freq", req.user.id, project_id, search, transcripts);
+        const newId = await processAnalysisQuery("freq", req.user.id, project_id, search, transcripts);
 
         res.status(200);
         res.json({ id: newId });
@@ -20,7 +20,7 @@ export const postMlu = async (req: Request, res: Response) => {
     const { transcripts } = req.body;
 
     try {
-        const newId = processAnalysisQuery("mlu", req.user.id, req.body.project_id, transcripts);
+        const newId = await processAnalysisQuery("mlu", req.user.id, req.body.project_id, transcripts);
 
         res.status(200);
         res.json({ id: newId });
@@ -32,10 +32,14 @@ export const postMlu = async (req: Request, res: Response) => {
 
 export const postKwal = async (req: Request, res: Response) => {
     // Get the transcript file name
-    const { project_id, search_utterance, transcripts } = req.body;
+    const { project_id, search_utterance, mor_filters, gra_filters, transcripts } = req.body;
 
     try {
-        const newId = processAnalysisQuery("kwal", req.user.id, project_id, transcripts, { search_utterance });
+        const newId = await processAnalysisQuery("kwal", req.user.id, project_id, transcripts, {
+            search_utterance,
+            mor_filters,
+            gra_filters,
+        });
 
         res.status(200);
         res.json({ id: newId });
@@ -50,7 +54,7 @@ export const postLexRare = async (req: Request, res: Response) => {
     const { target_tier, transcripts } = req.body;
 
     try {
-        const newId = processAnalysisQuery("lexrare", req.user.id, req.body.project_id, transcripts, {
+        const newId = await processAnalysisQuery("lexrare", req.user.id, req.body.project_id, transcripts, {
             target_tier,
         });
 

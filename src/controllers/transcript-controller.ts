@@ -186,63 +186,69 @@ export const postTranscript = async (req: Request, res: Response) => {
         const transcriptArrayNoMetadata = removeTranscriptMetadata(transcriptArray);
         const compiledTranscript = compileTranscript(transcriptArrayNoMetadata);
 
-        const { data: metadata } = await api.post(`transcript/metadata`, {
-            urls: [{ file_url: data.path, id: data.id }],
-        });
+        try {
+            const { data: metadata } = await api.post(`transcript/metadata`, {
+                urls: [{ file_url: data.path, id: data.id }],
+            });
 
-        const rows = await sql<{ id: number }[]>`
+            const rows = await sql<{ id: number }[]>`
             INSERT INTO transcripts (title, file_url, user_id, metadata, parsed_content, project_id, child_id)
             VALUES (${file.originalname}, ${data.path}, ${req.user.id}, ${metadata[data.id]}, ${compiledTranscript}, ${projectId}, ${req.body.child_id})
             RETURNING id
         `;
 
-        const newId = rows[0]?.id;
+            const newId = rows[0]?.id;
 
-        if (newId === undefined) {
-            const error = { errorMessage: "There was an issue inserting transcript" };
+            if (newId === undefined) {
+                const error = { errorMessage: "There was an issue inserting transcript" };
 
-            await sql<{ id: string }[]>`
+                await sql<{ id: string }[]>`
                 UPDATE tasks 
                 SET status = 'failed', content = ${{ error } as never}
                 WHERE id = ${taskId}
             `;
-            await fs.unlink(file.path);
-            return;
-        }
+                await fs.unlink(file.path);
+                return;
+            }
 
-        try {
-            const transcriptObject = [{ id: newId, file_url: data.path }];
+            try {
+                const transcriptObject = [{ id: newId, file_url: data.path }];
 
-            const lexRarePromise = processAnalysisQuery("lexrare", req.user.id, projectId, transcriptObject, {
-                target_tier: "mor",
-            });
-            const mluPromise = processAnalysisQuery("mlu", req.user.id, projectId, transcriptObject);
-            const frqPromise = processAnalysisQuery("freq", req.user.id, projectId, transcriptObject);
+                const lexRarePromise = processAnalysisQuery("lexrare", req.user.id, projectId, transcriptObject, {
+                    target_tier: "mor",
+                });
+                const mluPromise = processAnalysisQuery("mlu", req.user.id, projectId, transcriptObject);
+                const frqPromise = processAnalysisQuery("freq", req.user.id, projectId, transcriptObject);
 
-            await Promise.all([lexRarePromise, mluPromise, frqPromise]);
-        } catch (error) {
-            const errorMessage =
-                error && typeof error === "object" && "message" in error && typeof error.message === "string"
-                    ? error.message
-                    : "";
+                await Promise.all([lexRarePromise, mluPromise, frqPromise]);
+            } catch (error) {
+                const errorMessage =
+                    error && typeof error === "object" && "message" in error && typeof error.message === "string"
+                        ? error.message
+                        : "";
 
-            await sql<{ id: number }[]>`
+                await sql<{ id: number }[]>`
                 UPDATE tasks 
                 SET status = 'failed', content = ${{ errorMessage } as never}
                 WHERE id = ${taskId}
             `;
-            await fs.unlink(file.path);
-            return;
-        }
+                await fs.unlink(file.path);
+                return;
+            }
 
-        transcriptsCompleted += 1;
+            transcriptsCompleted += 1;
 
-        await sql<{ id: number }[]>`
+            await sql<{ id: number }[]>`
             UPDATE tasks 
             SET content = ${{ transcriptsCompleted, totalTranscripts: req.files.length } as never}
             WHERE id = ${taskId}`;
 
-        await fs.unlink(file.path);
+            await fs.unlink(file.path);
+        } catch (err) {
+            console.error("Failed to analyse transcript", err);
+            await fs.unlink(file.path);
+            return;
+        }
     }
 
     await sql<{ id: number }[]>`
