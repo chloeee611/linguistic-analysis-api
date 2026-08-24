@@ -12,7 +12,7 @@ import {
     getTranscriptContent,
     postTranscript,
 } from "../controllers/transcript-controller";
-import { getAnalyses } from "../controllers/analysis-controller";
+import { getAnalyses, getAnalysis } from "../controllers/analysis-controller";
 
 import express from "express";
 import multer from "multer";
@@ -37,5 +37,6 @@ router.post("/:projectId/transcripts", upload.array("uploaded_file"), postTransc
 
 // Analysis
 router.get("/:projectId/analysis", getAnalyses);
+router.get("/:projectId/analysis/:analysisId", getAnalysis);
 
 export default router;

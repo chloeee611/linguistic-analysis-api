@@ -1,10 +1,10 @@
+import { generatePaginationLinksAndMeta, slicePages } from "../helpers/pagination.helpers";
 import { processAnalysisQuery } from "../helpers/analysis.helpers";
 import { validateParamString } from "../helpers/validation.helpers";
 import { Request, Response } from "express";
 import { Analysis } from "../model/analysis.types";
 
 import sql from "../external/db";
-import { generatePaginationLinksAndMeta, slicePages } from "../helpers/pagination.helpers";
 
 export const getAnalyses = async (req: Request, res: Response) => {
     const { projectId } = req.params;
@@ -41,6 +41,33 @@ export const getAnalyses = async (req: Request, res: Response) => {
     res.json({ results: slicedContent, ...linksAndMetaObject });
 };
 
+export const getAnalysis = async (req: Request, res: Response) => {
+    const { projectId, analysisId } = req.params;
+
+    if (!validateParamString(projectId) || !validateParamString(analysisId)) {
+        res.status(400);
+        res.json({ message: "Input parameters are incorrect" });
+        return;
+    }
+
+    const analyses = await sql<Analysis[]>`
+        SELECT *
+        FROM analyses
+        WHERE id = ${analysisId}
+        AND project_id = ${projectId}
+        AND user_id = ${req.user.id}
+    `;
+
+    if (analyses.length === 0) {
+        res.status(404);
+        res.json({ message: "Analysis not found" });
+        return;
+    }
+
+    res.status(200);
+    res.json(analyses[0]);
+};
+
 export const postFreq = async (req: Request, res: Response) => {
     const { project_id, search, transcripts } = req.body;
 
@@ -73,6 +100,12 @@ export const postMlu = async (req: Request, res: Response) => {
 export const postKwal = async (req: Request, res: Response) => {
     // Get the transcript file name
     const { project_id, search_utterance, mor_filters, gra_filters, transcripts } = req.body;
+
+    if (!validateParamString(project_id)) {
+        res.status(400);
+        res.json({ message: "Input parameters are incorrect" });
+        return;
+    }
 
     try {
         const newId = await processAnalysisQuery("kwal", req.user.id, project_id, transcripts, {
