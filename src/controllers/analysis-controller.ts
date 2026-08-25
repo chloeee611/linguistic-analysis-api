@@ -6,14 +6,21 @@ import { Analysis } from "../model/analysis.types";
 
 import sql from "../external/db";
 
+// Gets all analyses for a user
 export const getAnalyses = async (req: Request, res: Response) => {
     const { projectId } = req.params;
-    const { page = "1", pageSize = "25" } = req.query;
+    const { page = "1", pageSize = "25", analysisTypes } = req.query;
 
-    if (!validateParamString(projectId)) {
+    if ((analysisTypes && typeof analysisTypes !== "string") || !validateParamString(projectId)) {
         res.status(400);
+        res.json({ message: "Invalid params" });
         return;
     }
+
+    // Decodes URL to handle filtering of analysis results by type
+    const typesFiltered = analysisTypes ? decodeURIComponent(analysisTypes).split(",") : [];
+
+    const typesWhere = typesFiltered.length > 0 ? sql`AND analyses.type IN ${sql(typesFiltered)}` : sql``;
 
     const analyses = await sql<Analysis[]>`
         SELECT id, type, created_at, COUNT(transcript_id) as transcript_count
@@ -22,6 +29,7 @@ export const getAnalyses = async (req: Request, res: Response) => {
         ON analyses.id = analyses_transcripts.analysis_id
         WHERE user_id = ${req.user.id}
         AND project_id = ${projectId}
+        ${typesWhere}
         GROUP BY id, type
     `;
 
@@ -41,6 +49,7 @@ export const getAnalyses = async (req: Request, res: Response) => {
     res.json({ results: slicedContent, ...linksAndMetaObject });
 };
 
+// Gets the results of one analysis for a user
 export const getAnalysis = async (req: Request, res: Response) => {
     const { projectId, analysisId } = req.params;
 
@@ -51,11 +60,14 @@ export const getAnalysis = async (req: Request, res: Response) => {
     }
 
     const analyses = await sql<Analysis[]>`
-        SELECT *
+        SELECT analyses.id, analyses.type, analyses.created_at, analyses.request, array_agg(analyses_transcripts.result) as results
         FROM analyses
+        INNER JOIN analyses_transcripts
+        ON analyses.id = analyses_transcripts.analysis_id
         WHERE id = ${analysisId}
         AND project_id = ${projectId}
         AND user_id = ${req.user.id}
+        GROUP BY analyses.id
     `;
 
     if (analyses.length === 0) {
@@ -68,6 +80,7 @@ export const getAnalysis = async (req: Request, res: Response) => {
     res.json(analyses[0]);
 };
 
+// Handles FREQ analysis
 export const postFreq = async (req: Request, res: Response) => {
     const { project_id, search, transcripts } = req.body;
 
@@ -82,6 +95,7 @@ export const postFreq = async (req: Request, res: Response) => {
     }
 };
 
+// Handles MLU analysis
 export const postMlu = async (req: Request, res: Response) => {
     // Get the transcript file name
     const { transcripts } = req.body;
@@ -97,6 +111,7 @@ export const postMlu = async (req: Request, res: Response) => {
     }
 };
 
+// Handles KWAL analysis
 export const postKwal = async (req: Request, res: Response) => {
     // Get the transcript file name
     const { project_id, search_utterance, mor_filters, gra_filters, transcripts } = req.body;
@@ -122,6 +137,7 @@ export const postKwal = async (req: Request, res: Response) => {
     }
 };
 
+// Handles LEXRARE analysis
 export const postLexRare = async (req: Request, res: Response) => {
     // Get the transcript file name
     const { target_tier, transcripts } = req.body;

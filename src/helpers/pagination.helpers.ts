@@ -1,3 +1,5 @@
+// Handles pagination logic
+
 export type PaginationLinks = {
     first: string;
     self: string;
@@ -13,8 +15,9 @@ export type PaginationMeta = {
     lastPage: number;
 };
 
-export const slicePages = <T extends unknown>(transcript: T[], page: number, pageSize: number) => {
-    return transcript.slice(page * pageSize, (page + 1) * pageSize);
+// Handles the segment required for the current pagination settings
+export const slicePages = <T extends unknown>(content: T[], page: number, pageSize: number) => {
+    return content.slice(page * pageSize, (page + 1) * pageSize);
 };
 
 export const generatePaginationLinksAndMeta = (

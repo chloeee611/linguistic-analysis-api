@@ -6,7 +6,7 @@ if (!baseURL) {
     throw new Error("Missing base url for analysis API");
 }
 
-export const api = axios.create({
+export const analysisApi = axios.create({
     baseURL,
     headers: {
         "Content-Type": "application/json",

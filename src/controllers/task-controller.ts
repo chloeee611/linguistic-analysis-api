@@ -4,6 +4,10 @@ import { Project } from "../model/project.types";
 
 import sql from "../external/db";
 
+// This controller handles the upload of transcript files
+// 'Task' is used to refer to the action of uploading a file
+
+// Gets all tasks for a user
 export const getAllTasks = async (req: Request, res: Response) => {
     const tasks = await sql<Project[]>`
         SELECT *
@@ -15,6 +19,8 @@ export const getAllTasks = async (req: Request, res: Response) => {
     res.json(tasks);
 };
 
+// Gets a task for a user - this is used to get the progress of a task during upload
+// which is what allows the progress bar in the frontend to work
 export const getTask = async (req: Request, res: Response) => {
     const { taskId } = req.params;
 
@@ -42,6 +48,7 @@ export const getTask = async (req: Request, res: Response) => {
     res.json(tasks[0]);
 };
 
+// Allows a task to be cancelled during upload
 export const cancelTask = async (req: Request, res: Response) => {
     const { taskId } = req.params;
 

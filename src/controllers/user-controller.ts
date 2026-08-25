@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { User } from "../model/user.types";
 import sql from "../external/db";
 
+// Gets all users
 export const getAllUsers = async (_: Request, res: Response) => {
     const users = await sql<User[]>`
         SELECT id, name, username, email, bio, research_field, location, TO_CHAR(dob, 'yyyy-mm-dd') as dob
@@ -13,6 +14,7 @@ export const getAllUsers = async (_: Request, res: Response) => {
     res.json(users);
 };
 
+// Gets one user
 export const getUser = async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -31,6 +33,7 @@ export const getUser = async (req: Request, res: Response) => {
     res.json(users[0]);
 };
 
+// Gets the current user securely
 export const getMe = async (req: Request, res: Response) => {
     const { id } = req.user;
 
@@ -49,6 +52,7 @@ export const getMe = async (req: Request, res: Response) => {
     res.json(users[0]);
 };
 
+// Allows user to edit profile details
 export const putUserDetails = async (req: Request, res: Response) => {
     const { id } = req.user;
     const { email, dob, bio, research_field, location } = req.body;
@@ -58,6 +62,7 @@ export const putUserDetails = async (req: Request, res: Response) => {
         return;
     }
 
+    // Validates the inputted data
     const validationResults: Record<string, string> = {};
 
     if (!validateEmail(email)) {
@@ -88,6 +93,7 @@ export const putUserDetails = async (req: Request, res: Response) => {
         return;
     }
 
+    // SQL query updates the relevant row of data in the users table based on the inputted profile data
     const users = await sql<User[]>`
         UPDATE users
         SET email = ${email}, dob = ${dob}, bio = ${bio}, research_field = ${research_field}, location = ${location}
@@ -98,6 +104,7 @@ export const putUserDetails = async (req: Request, res: Response) => {
     res.json(users);
 };
 
+// Gets the data required for the homepage dashboard stats
 export const getDashboard = async (req: Request, res: Response) => {
     // Total number of projects
     const projects = await sql<{ count: string }[]>`

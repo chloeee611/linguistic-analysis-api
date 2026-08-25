@@ -2,16 +2,12 @@ import { Request, Response, NextFunction } from "express";
 
 import jwt from "jsonwebtoken";
 
-export const validateJwt = (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-) => {
+// Validates the JSON Web Token
+export const validateJwt = (req: Request, res: Response, next: NextFunction) => {
     const auth = req.headers["authorization"];
     const token = auth?.split(" ")[1];
 
     if (!token) {
-        console.log("Error - no token provided");
         res.status(500);
         res.json({
             message: "Error - no token provided",

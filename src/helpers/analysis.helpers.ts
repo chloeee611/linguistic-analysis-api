@@ -1,9 +1,10 @@
 import { AnalysisArgs, AnalysisType } from "../model/analysis.types";
+import { analysisApi } from "../external/analysis-api";
 import { Transcript } from "../model/transcript.types";
-import { api } from "../external/analysis-api";
 
 import sql from "../external/db";
 
+// Handles analysis
 export const processAnalysisQuery = async <T extends AnalysisType>(
     type: T,
     userId: number,
@@ -16,8 +17,10 @@ export const processAnalysisQuery = async <T extends AnalysisType>(
         ...args,
     };
 
-    const { data } = await api.post(`analysis/${type}`, requestBody);
+    // Performs the relevant analysis
+    const { data } = await analysisApi.post(`analysis/${type}`, requestBody);
 
+    // Inserts new row into the analyses table once analysis is complete
     const rows = await sql<{ id: number }[]>`
         INSERT INTO analyses (user_id, project_id, type, request)
         VALUES (${userId}, ${projectId ?? null}, ${type}, ${requestBody})
@@ -30,8 +33,7 @@ export const processAnalysisQuery = async <T extends AnalysisType>(
         throw new Error(`There was an issue inserting ${type} analysis`);
     }
 
-    // TODO: add result to this, not above
-
+    // Inserts new row into the analyses_transcripts table with the results
     for (const { id } of transcripts) {
         await sql`
             INSERT INTO analyses_transcripts (analysis_id, transcript_id, result)
@@ -48,6 +50,7 @@ type ProjectDashboardGraph = {
     age: string;
 };
 
+// Pulls the data required for the MLU, FREQ, and LEXRARE graphs
 export const generateSummary = async (
     type: AnalysisType,
     title: string,

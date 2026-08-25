@@ -13,9 +13,11 @@ type RegisterRequest = {
     confirmPassword: string;
 };
 
+// Register controller
 export const postRegister = async (req: Request, res: Response) => {
     const { name, username, email, password } = req.body as RegisterRequest;
 
+    // Validates each field in the register form
     const validationResults: Record<string, string> = {};
 
     if (!validateUsername(username)) {
@@ -40,6 +42,7 @@ export const postRegister = async (req: Request, res: Response) => {
         return;
     }
 
+    // Handles situations where a new user enters a username that already exists
     const usersWithUsername = await sql<User[]>`
         SELECT *
         FROM users
@@ -54,6 +57,7 @@ export const postRegister = async (req: Request, res: Response) => {
         return;
     }
 
+    // Handles situations where a new user enters an email address that is already in use
     const usersWithEmail = await sql<User[]>`
         SELECT *
         FROM users
@@ -68,8 +72,10 @@ export const postRegister = async (req: Request, res: Response) => {
         return;
     }
 
+    // Hashes the password using bcrypt
     const hashedPassword = await bcrypt.hash(password, SALT_WORK_FACTOR);
 
+    // Inserts new row into the users table upon successful registration
     await sql`
         INSERT INTO users (name, username, email, password)
         VALUES (${name}, ${username}, ${email}, ${hashedPassword})`;

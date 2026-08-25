@@ -5,6 +5,7 @@ import { Project } from "../model/project.types";
 
 import sql from "../external/db";
 
+// Gets all projects for a user
 export const getAllProjects = async (req: Request, res: Response) => {
     const projects = await sql<Project[]>`
         SELECT *
@@ -16,6 +17,7 @@ export const getAllProjects = async (req: Request, res: Response) => {
     res.json(projects);
 };
 
+// Gets one project for a user
 export const getProject = async (req: Request, res: Response) => {
     const { projectId } = req.params;
 
@@ -43,6 +45,7 @@ export const getProject = async (req: Request, res: Response) => {
     res.json(projects[0]);
 };
 
+// Gets the children (participants) that have been added to a project
 export const getProjectChildren = async (req: Request, res: Response) => {
     const { projectId } = req.params;
 
@@ -66,6 +69,7 @@ export const getProjectChildren = async (req: Request, res: Response) => {
     res.json(children);
 };
 
+// Gets the data required for the graphs in the project dashboard
 export const getProjectDashboard = async (req: Request, res: Response) => {
     const { projectId } = req.params;
 
@@ -106,6 +110,7 @@ export const getProjectDashboard = async (req: Request, res: Response) => {
     res.json({ graphData: { lexrare, mlu, freq }, colourKeys: currentColourKeys });
 };
 
+// Allows project details to be edited
 export const putProject = async (req: Request, res: Response) => {
     const { projectId } = req.params;
     const { title, description, children } = req.body;
@@ -116,6 +121,7 @@ export const putProject = async (req: Request, res: Response) => {
         return;
     }
 
+    // SQL queries to update the title, description, and children fields
     await sql<{ id: number }[]>`
         UPDATE projects SET title = ${title}, description = ${description}
         WHERE id = ${projectId}`;
@@ -130,9 +136,11 @@ export const putProject = async (req: Request, res: Response) => {
     res.json({ message: "Project updated" });
 };
 
+// Creates a new project
 export const postProject = async (req: Request, res: Response) => {
     const { title, description, children } = req.body;
 
+    // Validates that the inputted data matches the requirements
     const validationResults: Record<string, string> = {};
 
     if (!validateRequiredString(title)) {
@@ -151,6 +159,7 @@ export const postProject = async (req: Request, res: Response) => {
         return;
     }
 
+    // Inserts new row into the projects table
     const rows = await sql<{ id: number }[]>`
     INSERT INTO projects (user_id, title, description)
     VALUES (${req.user.id}, ${title}, ${description}) RETURNING id`;
@@ -163,6 +172,7 @@ export const postProject = async (req: Request, res: Response) => {
         return;
     }
 
+    // Any children added to the project are inserted as a new row into the children table
     for (const child of children) {
         await sql<{ id: number }[]>`
             INSERT INTO children (project_id, name)

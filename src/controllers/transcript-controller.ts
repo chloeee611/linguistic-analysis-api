@@ -5,12 +5,13 @@ import { validateParamString } from "../helpers/validation.helpers";
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { Transcript } from "../model/transcript.types";
-import { api } from "../external/analysis-api";
+import { analysisApi } from "../external/analysis-api";
 
 import supabase from "../external/storage";
 import sql from "../external/db";
 import fs from "fs/promises";
 
+// Gets all transcripts for a project
 export const getAllTranscripts = async (req: Request, res: Response) => {
     const { projectId } = req.params;
     const { page = "1", pageSize = "25", children } = req.query;
@@ -21,6 +22,7 @@ export const getAllTranscripts = async (req: Request, res: Response) => {
         return;
     }
 
+    // Decodes URL to handle filtering of transcripts by children
     const childrenFiltered = children ? decodeURIComponent(children).split(",") : [];
 
     const childrenWhere =
@@ -36,6 +38,7 @@ export const getAllTranscripts = async (req: Request, res: Response) => {
         ${childrenWhere}
     `;
 
+    // Handles pagination of transcripts
     const pageNumber = Number(page);
     const pageSizeNumber = Number(pageSize);
 
@@ -52,6 +55,7 @@ export const getAllTranscripts = async (req: Request, res: Response) => {
     res.json({ results: slicedContent, ...linksAndMetaObject });
 };
 
+// Gets a transcript for a project
 export const getTranscript = async (req: Request, res: Response) => {
     const { projectId, transcriptId } = req.params;
 
@@ -74,6 +78,7 @@ export const getTranscript = async (req: Request, res: Response) => {
     res.json(transcripts[0]);
 };
 
+// Gets the content of a transcript
 export const getTranscriptContent = async (req: Request, res: Response) => {
     const { projectId, transcriptId } = req.params;
     const { page = "1", pageSize = "25" } = req.query;
@@ -83,6 +88,7 @@ export const getTranscriptContent = async (req: Request, res: Response) => {
         return;
     }
 
+    // SQL query retrieves the already parsed content from the transcripts table
     const transcript = (
         await sql<Transcript[]>`
         SELECT parsed_content
@@ -126,6 +132,7 @@ export const getTranscriptContent = async (req: Request, res: Response) => {
     });
 };
 
+// Uploads a new transcript
 export const postTranscript = async (req: Request, res: Response) => {
     const { projectId } = req.params;
 
@@ -148,6 +155,7 @@ export const postTranscript = async (req: Request, res: Response) => {
             RETURNING id
         `;
 
+    // Generates the task and returns the task ID early which prevents this endpoint from timing out
     const taskId = task[0]?.id;
 
     if (!taskId) {
@@ -163,15 +171,17 @@ export const postTranscript = async (req: Request, res: Response) => {
 
     let transcriptsCompleted: number = 0;
 
+    // Iterates each file to be uploaded
     for (const file of req.files) {
         let fileUtf = await fs.readFile(file.path, "utf8");
 
+        // Get the text content for the current file from storage
         const { error, data } = await supabase.storage
             .from("transcripts")
             .upload(`${req.user.id}/${uuidv4()}`, fileUtf);
 
         if (error) {
-            // Handle error
+            // Handle error - if upload fails then the task status is updated to 'failed'
             console.error(error);
             await sql<{ id: number }[]>`
                 UPDATE tasks 
@@ -182,15 +192,18 @@ export const postTranscript = async (req: Request, res: Response) => {
             return;
         }
 
+        // Process the transcript into JSON format, by generating an array of lines without the metadata section
         const transcriptArray = transcriptToArray(fileUtf);
         const transcriptArrayNoMetadata = removeTranscriptMetadata(transcriptArray);
         const compiledTranscript = compileTranscript(transcriptArrayNoMetadata);
 
         try {
-            const { data: metadata } = await api.post(`transcript/metadata`, {
+            // Calls the Python Metdata analysis endpoint, returning a JSON structure of the metadata
+            const { data: metadata } = await analysisApi.post(`transcript/metadata`, {
                 urls: [{ file_url: data.path, id: data.id }],
             });
 
+            // Add an entry for the new transcript, along with the generated Metadata and Content JSON structures
             const rows = await sql<{ id: number }[]>`
             INSERT INTO transcripts (title, file_url, user_id, metadata, parsed_content, project_id, child_id)
             VALUES (${file.originalname}, ${data.path}, ${req.user.id}, ${metadata[data.id]}, ${compiledTranscript}, ${projectId}, ${req.body.child_id})
@@ -200,6 +213,7 @@ export const postTranscript = async (req: Request, res: Response) => {
             const newId = rows[0]?.id;
 
             if (newId === undefined) {
+                // Handle error - if upload fails then the task status is updated to 'failed'
                 const error = { errorMessage: "There was an issue inserting transcript" };
 
                 await sql<{ id: string }[]>`
@@ -214,12 +228,14 @@ export const postTranscript = async (req: Request, res: Response) => {
             try {
                 const transcriptObject = [{ id: newId, file_url: data.path }];
 
+                // As the transcripts never change unless they're reuploaded, we can run these base 3 analyses immediately
                 const lexRarePromise = processAnalysisQuery("lexrare", req.user.id, projectId, transcriptObject, {
                     target_tier: "mor",
                 });
                 const mluPromise = processAnalysisQuery("mlu", req.user.id, projectId, transcriptObject);
                 const frqPromise = processAnalysisQuery("freq", req.user.id, projectId, transcriptObject);
 
+                // Await all analysis async tasks to complete
                 await Promise.all([lexRarePromise, mluPromise, frqPromise]);
             } catch (error) {
                 const errorMessage =
@@ -236,6 +252,7 @@ export const postTranscript = async (req: Request, res: Response) => {
                 return;
             }
 
+            // Update the task to show the current progress increased by one
             transcriptsCompleted += 1;
 
             await sql<{ id: number }[]>`
@@ -251,6 +268,7 @@ export const postTranscript = async (req: Request, res: Response) => {
         }
     }
 
+    // Update the task to show the transcripts uploading has completed
     await sql<{ id: number }[]>`
             UPDATE tasks 
             SET status = 'success', content = ${{ transcriptsCompleted, totalTranscripts: req.files.length } as never}

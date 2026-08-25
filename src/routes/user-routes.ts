@@ -4,9 +4,9 @@ import express from "express";
 
 const router = express.Router({ mergeParams: true });
 
-router.get("/dashboard", getDashboard);
 router.get("/", getAllUsers);
 router.get("/me", getMe);
+router.get("/dashboard", getDashboard);
 router.get("/:id", getUser);
 router.put("/:id", putUserDetails);
 

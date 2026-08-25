@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { User } from "../model/user.types";
+
 import sql from "../external/db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -9,6 +10,7 @@ type LoginRequest = {
     password: string;
 };
 
+// Login controller
 export const postLogin = async (req: Request, res: Response) => {
     if (!process.env.JWT_SECRET) {
         throw new Error("Secret string not found");
@@ -16,6 +18,7 @@ export const postLogin = async (req: Request, res: Response) => {
 
     const { username, password } = req.body as LoginRequest;
 
+    // SQL query searches the users table to find matching record
     const users = await sql<User[]>`
         SELECT *
         FROM users
@@ -33,6 +36,7 @@ export const postLogin = async (req: Request, res: Response) => {
     const user = users[0]!;
 
     try {
+        // Uses bcrypt to compare entered password with stored password
         const match = await bcrypt.compare(password, user.password);
 
         // Password incorrect
@@ -62,7 +66,7 @@ export const postLogin = async (req: Request, res: Response) => {
                 email: user.email,
             },
             process.env.JWT_SECRET,
-            { expiresIn: "1d" },
+            { expiresIn: "1d" }
         );
     } catch (err2) {
         console.log(err2);

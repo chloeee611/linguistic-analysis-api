@@ -1,9 +1,11 @@
 import { TranscriptContent, TranscriptMor, TranscriptGra } from "../model/transcript.types";
 
+// Split the transcript by new line
 export const transcriptToArray = (transcript: string) => {
     return transcript.split("\n");
 };
 
+// Remove all metadata lines at the beginning of the file
 export const removeTranscriptMetadata = (transcriptArray: string[]) => {
     const newArray = [...transcriptArray];
 
@@ -18,6 +20,8 @@ export const removeTranscriptMetadata = (transcriptArray: string[]) => {
     return newArray;
 };
 
+// Replicates the Python Analysis processing of each line in a transcript file; converting the MOR and GRA tiers
+// into JSON objects which are later presented in the UI
 export const compileTranscript = (transcript: string[]): any[] => {
     const transcriptBuilder: TranscriptContent[] = [];
 
