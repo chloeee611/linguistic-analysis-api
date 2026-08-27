@@ -1,6 +1,7 @@
 import { validateRequiredString, validateEmail, validateDob } from "../helpers/validation.helpers";
 import { Request, Response } from "express";
 import { User } from "../model/user.types";
+
 import sql from "../external/db";
 
 // Gets all users

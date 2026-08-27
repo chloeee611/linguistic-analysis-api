@@ -1,8 +1,9 @@
+import { validateEmail, validatePassword, validateUsername } from "../helpers/validation.helpers";
 import { Request, Response } from "express";
 import { User } from "../model/user.types";
+
 import sql from "../external/db";
 import bcrypt from "bcrypt";
-import { validateEmail, validatePassword, validateUsername } from "../helpers/validation.helpers";
 const SALT_WORK_FACTOR = 10;
 
 type RegisterRequest = {

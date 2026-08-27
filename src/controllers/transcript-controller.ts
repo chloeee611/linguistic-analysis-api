@@ -4,8 +4,8 @@ import { processAnalysisQuery } from "../helpers/analysis.helpers";
 import { validateParamString } from "../helpers/validation.helpers";
 import { Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
-import { Transcript } from "../model/transcript.types";
 import { analysisApi } from "../external/analysis-api";
+import { Transcript } from "../model/transcript.types";
 
 import supabase from "../external/storage";
 import sql from "../external/db";
