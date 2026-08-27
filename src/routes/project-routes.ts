@@ -7,6 +7,7 @@ import {
     putProject,
 } from "../controllers/project-controller";
 import {
+    deleteTranscript,
     getAllTranscripts,
     getTranscript,
     getTranscriptContent,
@@ -34,6 +35,7 @@ router.get("/:projectId/transcripts", getAllTranscripts);
 router.get("/:projectId/transcripts/:transcriptId", getTranscript);
 router.get("/:projectId/transcripts/:transcriptId/content", getTranscriptContent);
 router.post("/:projectId/transcripts", upload.array("uploaded_file"), postTranscript);
+router.delete("/:projectId/transcripts/:transcriptId", deleteTranscript);
 
 // Analysis
 router.get("/:projectId/analysis", getAnalyses);

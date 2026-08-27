@@ -23,14 +23,17 @@ export const getAnalyses = async (req: Request, res: Response) => {
     const typesWhere = typesFiltered.length > 0 ? sql`AND analyses.type IN ${sql(typesFiltered)}` : sql``;
 
     const analyses = await sql<Analysis[]>`
-        SELECT id, type, created_at, COUNT(transcript_id) as transcript_count
+        SELECT analyses.id, type, analyses.created_at, COUNT(transcript_id) as transcript_count
         FROM analyses
         INNER JOIN analyses_transcripts
         ON analyses.id = analyses_transcripts.analysis_id
-        WHERE user_id = ${req.user.id}
-        AND project_id = ${projectId}
+        INNER JOIN transcripts
+        ON analyses_transcripts.transcript_id = transcripts.id
+        WHERE analyses.user_id = ${req.user.id}
+        AND analyses.project_id = ${projectId}
+        AND transcripts.deleted_at IS NULL
         ${typesWhere}
-        GROUP BY id, type
+        GROUP BY analyses.id, type
     `;
 
     const pageNumber = Number(page);
@@ -64,9 +67,12 @@ export const getAnalysis = async (req: Request, res: Response) => {
         FROM analyses
         INNER JOIN analyses_transcripts
         ON analyses.id = analyses_transcripts.analysis_id
-        WHERE id = ${analysisId}
-        AND project_id = ${projectId}
-        AND user_id = ${req.user.id}
+        INNER JOIN transcripts
+        ON analyses_transcripts.transcript_id = transcripts.id
+        WHERE analyses.id = ${analysisId}
+        AND analyses.project_id = ${projectId}
+        AND analyses.user_id = ${req.user.id}
+        AND transcripts.deleted_at IS NULL
         GROUP BY analyses.id
     `;
 

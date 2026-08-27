@@ -71,6 +71,7 @@ export const generateSummary = async (
         WHERE transcripts.project_id = ${projectId}
         AND transcripts.user_id = ${userId}
         AND analyses.type = ${type}
+        AND transcripts.deleted_at IS NULL
         GROUP BY transcripts.id, analyses_transcripts.result, children.name
         ORDER BY age ASC
     `;

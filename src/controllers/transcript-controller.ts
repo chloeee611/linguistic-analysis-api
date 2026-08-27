@@ -35,6 +35,7 @@ export const getAllTranscripts = async (req: Request, res: Response) => {
         ON transcripts.child_id = children.id
         WHERE transcripts.user_id = ${req.user.id}
         AND transcripts.project_id = ${projectId}
+        AND transcripts.deleted_at IS NULL
         ${childrenWhere}
     `;
 
@@ -72,6 +73,7 @@ export const getTranscript = async (req: Request, res: Response) => {
         WHERE transcripts.id = ${transcriptId}
         AND transcripts.user_id= ${req.user.id}
         AND transcripts.project_id = ${projectId}
+        AND transcripts.deleted_at IS NULL
     `;
 
     res.status(200);
@@ -96,6 +98,7 @@ export const getTranscriptContent = async (req: Request, res: Response) => {
         WHERE id = ${transcriptId}
         AND user_id= ${req.user.id}
         AND project_id = ${projectId}
+        AND transcripts.deleted_at IS NULL
     `
     )[0];
 
@@ -273,4 +276,23 @@ export const postTranscript = async (req: Request, res: Response) => {
             UPDATE tasks 
             SET status = 'success', content = ${{ transcriptsCompleted, totalTranscripts: req.files.length } as never}
             WHERE id = ${taskId}`;
+};
+
+// Delete transcript by ID
+export const deleteTranscript = async (req: Request, res: Response) => {
+    const { transcriptId } = req.params;
+
+    if (!validateParamString(transcriptId)) {
+        res.status(400);
+        return;
+    }
+
+    const transcripts = await sql<Transcript[]>`
+        UPDATE transcripts SET deleted_at = ${new Date()}
+        WHERE transcripts.id = ${transcriptId}
+        AND transcripts.user_id= ${req.user.id}
+    `;
+
+    res.status(200);
+    res.json(transcripts);
 };
