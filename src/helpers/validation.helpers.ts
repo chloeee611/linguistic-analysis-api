@@ -36,7 +36,7 @@ export const validateUsername = (input: unknown): input is string => {
         return false;
     }
 
-    return /^[a-zA-Z0-9_]{3,15}$/.test(input);
+    return /^[a-zA-Z0-9_.]{3,15}$/.test(input);
 };
 
 // Validates that the password is more than 8 chars long and contains one uppercase, one lowercase, and one number
